@@ -1,6 +1,6 @@
-spack
+libspack
 =====
 
-[Serenity Linux](http://serenitylinux.org)'s package manager frontend.
+[Serenity Linux](http://serenitylinux.org)'s package library
 
 GPLv3. See LICENSE for details.
