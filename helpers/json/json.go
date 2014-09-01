@@ -1,9 +1,9 @@
 package json
 
 import (
-	"io"
-	"fmt"
 	"encoding/json"
+	"fmt"
+	"io"
 )
 import . "github.com/serenitylinux/libspack/misc"
 
@@ -13,11 +13,13 @@ func DecodeReader(reader io.Reader, item interface{}) error {
 }
 
 func DecodeFile(filename string, item interface{}) (err error) {
-	readerFunc := func (r io.Reader) { err = DecodeReader(r, item) }
-	
+	readerFunc := func(r io.Reader) { err = DecodeReader(r, item) }
+
 	ioerr := WithFileReader(filename, readerFunc)
-	if ioerr != nil { return ioerr }
-	
+	if ioerr != nil {
+		return ioerr
+	}
+
 	return
 }
 
@@ -27,11 +29,13 @@ func EncodeWriter(writer io.Writer, item interface{}) error {
 }
 
 func EncodeFile(filename string, create bool, item interface{}) (err error) {
-	writerFunc := func (w io.Writer) { err = EncodeWriter(w, item) }
-	
+	writerFunc := func(w io.Writer) { err = EncodeWriter(w, item) }
+
 	ioerr := WithFileWriter(filename, create, writerFunc)
-	if ioerr != nil { return ioerr }
-	
+	if ioerr != nil {
+		return ioerr
+	}
+
 	return
 }
 

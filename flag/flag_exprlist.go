@@ -5,14 +5,14 @@ import (
 )
 
 type exprlist struct {
-	e expr
-	op *op
+	e    expr
+	op   *op
 	next *exprlist
 }
 
 func parseExprList(in *parser.Input) (*exprlist, error) {
 	list := new(exprlist)
-	
+
 	e, err := parseExpr(in)
 	if err != nil {
 		return nil, err
@@ -21,25 +21,27 @@ func parseExprList(in *parser.Input) (*exprlist, error) {
 		return nil, nil
 	}
 	list.e = *e
-	
+
 	if op_isnext(in) {
-		nop, err := parseOp(in);
+		nop, err := parseOp(in)
 		if err != nil {
 			return nil, err
 		}
-		
-		nel, err := parseExprList(in);
+
+		nel, err := parseExprList(in)
 		if err != nil {
 			return nil, err
 		}
-		
+
 		list.op = nop
 		list.next = nel
 	}
 	return list, nil
 }
 func (list *exprlist) verify(flist *FlagList) bool {
-	if list == nil { return true }
+	if list == nil {
+		return true
+	}
 	if list.op == nil {
 		return list.e.verify(flist)
 	}
@@ -50,7 +52,9 @@ func (list *exprlist) verify(flist *FlagList) bool {
 	}
 }
 func (list *exprlist) String() string {
-	if list == nil { return "" }
+	if list == nil {
+		return ""
+	}
 	if list.op == nil {
 		return list.e.String()
 	}

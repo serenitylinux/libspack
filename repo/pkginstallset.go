@@ -1,10 +1,10 @@
 package repo
 
 import (
-	"github.com/serenitylinux/libspack/hash"
-	"github.com/serenitylinux/libspack/pkginfo"
 	"github.com/serenitylinux/libspack/control"
+	"github.com/serenitylinux/libspack/hash"
 	"github.com/serenitylinux/libspack/helpers/json"
+	"github.com/serenitylinux/libspack/pkginfo"
 )
 
 type PkgInstallSet struct {
@@ -14,7 +14,7 @@ type PkgInstallSet struct {
 }
 
 func NewPkgIS(c *control.Control, p *pkginfo.PkgInfo, hash hash.HashList) *PkgInstallSet {
-	return &PkgInstallSet{ c, p, hash };
+	return &PkgInstallSet{c, p, hash}
 }
 func (p *PkgInstallSet) ToFile(filename string) error {
 	return json.EncodeFile(filename, true, p)

@@ -18,15 +18,16 @@ flag = '[+,-]s*'
 
 import (
 	"errors"
-	"strings"
-	"github.com/serenitylinux/libspack/parser"
 	"github.com/cam72cam/go-lumberjack/color"
+	"github.com/serenitylinux/libspack/parser"
+	"strings"
 )
 
 type Flag struct {
-	Name string
+	Name    string
 	Enabled bool
 }
+
 func (f *Flag) Sign() string {
 	sign := "+"
 	if !f.Enabled {
@@ -51,21 +52,21 @@ func Parse(in *parser.Input) (*Flag, error) {
 	if !exists {
 		return nil, errors.New("Flag: Reached end of string while looking for sign")
 	}
-	
+
 	f.Enabled = "+" == sign
-	
+
 	f.Name = in.ReadUntill("[]+-&|(),")
-	
+
 	if len(f.Name) == 0 {
 		return nil, errors.New("Flag: Nothing available after sign")
 	}
-	
+
 	return f, nil
 }
 func FlagFromString(s string) (*Flag, error) {
 	s = strings.Replace(s, " ", "", -1)
 	in := parser.NewInput(s)
-	
+
 	f, err := Parse(&in)
 	if err != nil {
 		return nil, err

@@ -1,36 +1,36 @@
 package control
 
 import (
+	"bytes"
 	"fmt"
+	"github.com/cam72cam/go-lumberjack/log"
+	"github.com/serenitylinux/libspack/dep"
+	"github.com/serenitylinux/libspack/flag"
+	"github.com/serenitylinux/libspack/helpers/json"
+	"github.com/serenitylinux/libspack/misc"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"io"
-	"bytes"
-	"github.com/cam72cam/go-lumberjack/log"
-	"github.com/serenitylinux/libspack/misc"
-	"github.com/serenitylinux/libspack/flag"
-	"github.com/serenitylinux/libspack/dep"
-	"github.com/serenitylinux/libspack/helpers/json"
 )
 
 type Control struct {
-	Name string
-	Version string
-	Iteration int
+	Name        string
+	Version     string
+	Iteration   int
 	Description string
-	Url string
-	Src []string
-	Arch []string
-	
+	Url         string
+	Src         []string
+	Arch        []string
+
 	Bdeps []string
-	Deps []string
+	Deps  []string
 	Flags []string
-	
+
 	parsedFlags flag.FlagSetList
-	parsedDeps dep.DepList
+	parsedDeps  dep.DepList
 	parsedBDeps dep.DepList
-	
+
 	//Provides (libjpeg, cc)
 	//Provides Hook (update mime types)
 }
@@ -49,7 +49,6 @@ func (c ControlList) String() string {
 	return json.Stringify(c)
 }
 
-
 func (c *Control) ToFile(filename string) error {
 	return json.EncodeFile(filename, true, c)
 }
@@ -57,7 +56,6 @@ func (c *Control) ToFile(filename string) error {
 func (c *ControlList) ToFile(filename string) error {
 	return json.EncodeFile(filename, true, c)
 }
-
 
 func FromFile(filename string) (*Control, error) {
 	var c Control
@@ -74,7 +72,7 @@ func FromReader(reader io.Reader) (*Control, error) {
 //TODO consolidate into a single function
 
 func fromTemplateString(template string) (*Control, error) {
-		commands := `
+	commands := `
 %s
 
 function lister() {
@@ -107,34 +105,34 @@ cat << EOT
 },
 EOT`
 	commands = fmt.Sprintf(commands, template)
-	
+
 	var buf bytes.Buffer
 	cmd := exec.Command("bash", "-ec", commands)
 	cmd.Stdout = &buf
 	cmd.Stderr = os.Stderr
 	err := cmd.Run()
-	if err != nil { return nil, err	}
+	if err != nil {
+		return nil, err
+	}
 	return FromReader(bytes.NewReader(buf.Bytes()))
 }
 
 func FromTemplateFile(template string) (*Control, error) {
 	var str string
-	err := misc.WithFileReader(template, func (r io.Reader) {
+	err := misc.WithFileReader(template, func(r io.Reader) {
 		str = misc.ReaderToString(r)
 	})
 	if err != nil {
 		return nil, err
 	}
-	
+
 	//Don't care if does not exist
-	misc.WithFileReader(filepath.Dir(template) + "/default", func (r io.Reader) {
+	misc.WithFileReader(filepath.Dir(template)+"/default", func(r io.Reader) {
 		str += misc.ReaderToString(r)
 	})
-	
+
 	return fromTemplateString(str)
 }
-
-
 
 func (c *Control) ParsedFlags() flag.FlagSetList {
 	if c.parsedFlags == nil {

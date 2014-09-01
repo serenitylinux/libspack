@@ -2,19 +2,18 @@ package libspack
 
 import (
 	"fmt"
+	"github.com/cam72cam/go-lumberjack/color"
+	"github.com/cam72cam/go-lumberjack/log"
+	"github.com/serenitylinux/libspack/control"
+	"github.com/serenitylinux/libspack/misc"
+	"github.com/serenitylinux/libspack/pkginfo"
+	"github.com/serenitylinux/libspack/repo"
+	"io/ioutil"
 	"regexp"
 	"strconv"
-	"io/ioutil"
-	"github.com/cam72cam/go-lumberjack/log"
-	"github.com/cam72cam/go-lumberjack/color"
-	"github.com/serenitylinux/libspack/misc"
-	"github.com/serenitylinux/libspack/repo"
-	"github.com/serenitylinux/libspack/control"
-	"github.com/serenitylinux/libspack/pkginfo"
 )
 
 const reposDir = "/etc/spack/repos/"
-
 
 type RepoList map[string]*repo.Repo
 
@@ -30,14 +29,14 @@ func LoadRepos() error {
 	if err != nil {
 		return err
 	}
-	
+
 	for _, f := range files {
 		fAbs := reposDir + f.Name()
 		r, err := repo.FromFile(fAbs)
 		if err != nil {
 			return err
 		}
-		
+
 		repos[r.Name] = r
 	}
 	return nil
@@ -46,7 +45,7 @@ func LoadRepos() error {
 func RefreshRepos() {
 	log.Info.Println()
 	for _, repo := range repos {
-		log.Info.Println("Refreshing ",repo.Name)
+		log.Info.Println("Refreshing ", repo.Name)
 		misc.LogBar(log.Info, color.Brown)
 		repo.RefreshRemote()
 		PrintSuccess()
@@ -74,9 +73,9 @@ func GetPackageVersionIteration(pkgname, version, iteration string) (*control.Co
 		log.Warn.Println(e)
 		return nil, nil
 	}
-	var ctrl * control.Control
+	var ctrl *control.Control
 	for _, ver := range pkgs {
-		if (ver.Version == version) {
+		if ver.Version == version {
 			if itri == ver.Iteration {
 				ctrl = &ver
 				break
@@ -91,9 +90,9 @@ func GetPackageVersionIteration(pkgname, version, iteration string) (*control.Co
 }
 func GetPackageVersion(pkgname, version string) (*control.Control, *repo.Repo) {
 	pkgs, repo := GetPackageAllVersions(pkgname)
-	var ctrl * control.Control
+	var ctrl *control.Control
 	for _, ver := range pkgs {
-		if (ver.Version == version) {
+		if ver.Version == version {
 			if ctrl == nil || ctrl.Iteration < ver.Iteration {
 				ctrl = &ver
 			}
@@ -105,7 +104,7 @@ func GetPackageVersion(pkgname, version string) (*control.Control, *repo.Repo) {
 		return ctrl, repo
 	}
 }
-func GetPackageLatest(pkgname string) (*control.Control, *repo.Repo){
+func GetPackageLatest(pkgname string) (*control.Control, *repo.Repo) {
 	for _, repo := range repos {
 		c, exists := repo.GetLatestControl(pkgname)
 		if exists {
@@ -139,7 +138,8 @@ func RdepList(p *pkginfo.PkgInfo) []repo.PkgInstallSet {
 }
 
 func Header(str string) {
-	log.Info.Print(str + ": "); log.Debug.Println()
+	log.Info.Print(str + ": ")
+	log.Debug.Println()
 	misc.LogBar(log.Debug, color.Brown)
 }
 func HeaderFormat(str string, extra ...interface{}) {
@@ -157,21 +157,21 @@ func AskYesNo(question string, def bool) bool {
 		yn = "[y/N]"
 	}
 	fmt.Printf("%s: %s ", question, yn)
-	
+
 	var answer string
 	fmt.Scanf("%s", &answer)
-	
+
 	yesRgx := regexp.MustCompile("(y|Y|yes|Yes)")
 	noRgx := regexp.MustCompile("(n|N|no|No)")
 	switch {
-		case answer == "":
-			return def
-		case yesRgx.MatchString(answer):
-			return true
-		case noRgx.MatchString(answer):
-			return false
-		default:
-			fmt.Println("Please enter Y or N")
-			return AskYesNo(question, def)
+	case answer == "":
+		return def
+	case yesRgx.MatchString(answer):
+		return true
+	case noRgx.MatchString(answer):
+		return false
+	default:
+		fmt.Println("Please enter Y or N")
+		return AskYesNo(question, def)
 	}
 }

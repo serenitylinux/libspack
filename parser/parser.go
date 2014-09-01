@@ -6,22 +6,22 @@ import (
 
 type Input struct {
 	str string
-	i int
+	i   int
 }
 
 func (in *Input) HasNext(length int) bool {
-	return len(in.str) >= in.i + length
+	return len(in.str) >= in.i+length
 }
 func (in *Input) Peek(length int) (string, bool) {
 	if in.HasNext(length) {
-		return in.str[in.i:in.i+length], true
+		return in.str[in.i : in.i+length], true
 	}
 	return "", false
 }
 func (in *Input) Next(length int) (string, bool) {
 	if in.HasNext(length) {
 		in.i += length
-		return in.str[in.i-length:in.i], true
+		return in.str[in.i-length : in.i], true
 	}
 	return "", false
 }
@@ -47,5 +47,5 @@ func (in *Input) IsNext(str string) bool {
 }
 
 func NewInput(s string) Input {
-	return Input { s, 0 }
+	return Input{s, 0}
 }

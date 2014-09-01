@@ -2,24 +2,23 @@ package pkginfo
 
 import (
 	"fmt"
-	"io"
-	"time"
-	"hash/crc32"
+	"github.com/cam72cam/go-lumberjack/log"
 	"github.com/serenitylinux/libspack/control"
 	"github.com/serenitylinux/libspack/flag"
-	"github.com/cam72cam/go-lumberjack/log"
 	"github.com/serenitylinux/libspack/helpers/json"
+	"hash/crc32"
+	"io"
+	"time"
 )
 
-
 type PkgInfo struct {
-	Name string
-	Version string
-	Iteration int
-	BuildDate time.Time
-	Flags []string
-	parsedFlags flag.FlagSetList
-	FlagStates []string
+	Name             string
+	Version          string
+	Iteration        int
+	BuildDate        time.Time
+	Flags            []string
+	parsedFlags      flag.FlagSetList
+	FlagStates       []string
 	parsedFlagStates flag.FlagList
 }
 
@@ -44,7 +43,7 @@ func (p *PkgInfo) flagHash() uint32 {
 }
 
 func FromControl(c *control.Control) *PkgInfo {
-	p := PkgInfo{ Name: c.Name, Version: c.Version, Flags: c.Flags, Iteration: c.Iteration }
+	p := PkgInfo{Name: c.Name, Version: c.Version, Flags: c.Flags, Iteration: c.Iteration}
 	return &p
 }
 
@@ -87,7 +86,7 @@ func (p *PkgInfo) ParsedFlagStates() flag.FlagList {
 }
 func (p *PkgInfo) SetFlagState(f *flag.Flag) {
 	p.parsedFlagStates = nil
-	
+
 	for i, v := range p.FlagStates {
 		if v[1:] == f.Name { //equals ignore sign
 			p.FlagStates[i] = f.String()
@@ -110,7 +109,7 @@ func (p *PkgInfo) ComputedFlagStates() flag.FlagList {
 	for _, f := range p.ParsedFlags() {
 		res = append(res, f.Flag)
 	}
-	
+
 	for _, parsedf := range p.ParsedFlagStates() {
 		for i, currf := range res {
 			if currf.Name == parsedf.Name {

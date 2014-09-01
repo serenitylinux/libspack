@@ -1,8 +1,6 @@
 package flag
 
-import (
-	
-)
+import ()
 
 type FlagSetList []FlagSet
 
@@ -16,7 +14,7 @@ func (fsl FlagSetList) String() string {
 
 func (fsl *FlagSetList) Verify(list *FlagList) bool {
 	for _, fs := range *fsl {
-		if ! fs.Verify(list) {
+		if !fs.Verify(list) {
 			return false
 		}
 	}

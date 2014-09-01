@@ -12,21 +12,21 @@ type expr struct {
 
 func parseExpr(in *parser.Input) (*expr, error) {
 	e := new(expr)
-	if s,_ := in.Peek(1); s == "[" {
+	if s, _ := in.Peek(1); s == "[" {
 		in.Next(1)
-		
+
 		newl, err := parseExprList(in)
 		if err != nil {
 			return nil, err
 		}
-		
+
 		if newl == nil {
 			return nil, errors.New("[ ... ] must contain at least one flag")
 		}
-		
+
 		e.list = newl
-		
-		s,_ := in.Next(1)
+
+		s, _ := in.Next(1)
 		if s != "]" {
 			return nil, errors.New("Expression: Unexpected char '" + s + "'")
 		}
@@ -35,7 +35,7 @@ func parseExpr(in *parser.Input) (*expr, error) {
 		if err != nil {
 			return nil, err
 		}
-		
+
 		e.flag = newf
 	}
 	return e, nil

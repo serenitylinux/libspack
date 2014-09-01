@@ -1,12 +1,12 @@
 package repo
 
 import (
-	"os"
 	"fmt"
-	"path/filepath"
 	"github.com/cam72cam/go-lumberjack/log"
 	"github.com/serenitylinux/libspack/control"
 	"github.com/serenitylinux/libspack/pkginfo"
+	"os"
+	"path/filepath"
 )
 
 import . "github.com/serenitylinux/libspack/misc"
@@ -23,7 +23,7 @@ func (repo *Repo) GetControls(pkgname string) (control.ControlList, bool) {
 func (repo *Repo) GetLatestControl(pkgname string) (*control.Control, bool) {
 	c, exists := repo.GetControls(pkgname)
 	var res *control.Control = nil
-	
+
 	if exists {
 		for _, ctrl := range c {
 			if res == nil || res.UUID() < ctrl.UUID() {
@@ -34,10 +34,10 @@ func (repo *Repo) GetLatestControl(pkgname string) (*control.Control, bool) {
 	return res, res != nil
 }
 
-func (repo *Repo) GetPackageByVersionChecker(pkgname string, checker func (string) bool) (*control.Control) {
+func (repo *Repo) GetPackageByVersionChecker(pkgname string, checker func(string) bool) *control.Control {
 	c, exists := repo.GetControls(pkgname)
 	var res *control.Control = nil
-	
+
 	if exists {
 		for _, ctrl := range c {
 			if (res == nil || res.UUID() < ctrl.UUID()) && checker(ctrl.Version) {
@@ -54,15 +54,19 @@ func (repo *Repo) GetAllTemplates() TemplateFileMap {
 
 func (repo *Repo) GetTemplateByControl(c *control.Control) (string, bool) {
 	byName, exists := repo.GetAllTemplates()[c.Name]
-	if !exists { return "", false }
+	if !exists {
+		return "", false
+	}
 	byUUID := byName[c.UUID()]
-	if !exists { return "", false }
+	if !exists {
+		return "", false
+	}
 	return byUUID, true
 }
 
 func (repo *Repo) GetSpakgOutput(p *pkginfo.PkgInfo) string {
 	if !PathExists(SpakgDir + repo.Name) {
-		os.MkdirAll(SpakgDir + repo.Name, 0755)
+		os.MkdirAll(SpakgDir+repo.Name, 0755)
 	}
 	repo.spakgDir()
 	return repo.spakgDir() + fmt.Sprintf("%s.spakg", p.UUID())
@@ -83,12 +87,12 @@ func (repo *Repo) HasSpakg(p *pkginfo.PkgInfo) bool {
 func (repo *Repo) HasAnySpakg(c *control.Control) bool {
 	for _, plist := range *repo.fetchable {
 		for _, p := range plist {
-			if (p.InstanceOf(c)) {
+			if p.InstanceOf(c) {
 				return true
 			}
 		}
 	}
-	
+
 	return false
 }
 
@@ -96,7 +100,6 @@ func (repo *Repo) HasTemplate(c *control.Control) bool {
 	_, exists := repo.GetTemplateByControl(c)
 	return exists
 }
-
 
 func (repo *Repo) IsInstalled(p *pkginfo.PkgInfo, basedir string) bool {
 	if filepath.Clean(basedir) == "/" {
@@ -109,7 +112,7 @@ func (repo *Repo) IsInstalled(p *pkginfo.PkgInfo, basedir string) bool {
 }
 func (repo *Repo) IsAnyInstalled(c *control.Control, basedir string) bool {
 	if filepath.Clean(basedir) == "/" {
-		for _, pkg := range (*repo.installed) {
+		for _, pkg := range *repo.installed {
 			if pkg.Control.UUID() == c.UUID() {
 				return true
 			}
@@ -120,20 +123,20 @@ func (repo *Repo) IsAnyInstalled(c *control.Control, basedir string) bool {
 	return false
 }
 
-func (repo *Repo) GetAllInstalled() []PkgInstallSet{
+func (repo *Repo) GetAllInstalled() []PkgInstallSet {
 	res := make([]PkgInstallSet, 0)
-	for _, i := range (*repo.installed) {
+	for _, i := range *repo.installed {
 		res = append(res, i)
 	}
-	return  res
+	return res
 }
 
 func (repo *Repo) GetInstalledByName(name string, basedir string) *PkgInstallSet {
 	var list *PkgInstallSetMap
-	
+
 	if filepath.Clean(basedir) == "/" {
 		list = repo.installed
-		
+
 	} else {
 		var err error
 		list, err = installedPackageList(basedir + repo.installedPkgsDir())
@@ -142,7 +145,7 @@ func (repo *Repo) GetInstalledByName(name string, basedir string) *PkgInstallSet
 			return nil
 		}
 	}
-	
+
 	for _, set := range *list {
 		if set.PkgInfo.Name == name {
 			return &set
@@ -174,8 +177,8 @@ func (repo *Repo) GetInstalled(p *pkginfo.PkgInfo, basedir string) *PkgInstallSe
 
 // TODO actually check if that dep is enabled or not in the pkginfo
 func (repo *Repo) RdepList(p *pkginfo.PkgInfo) []PkgInstallSet {
-	pkgs := make([]PkgInstallSet,0)
-	
+	pkgs := make([]PkgInstallSet, 0)
+
 	for _, set := range *repo.installed {
 		for _, dep := range set.Control.Deps {
 			if dep == p.Name {
@@ -183,23 +186,23 @@ func (repo *Repo) RdepList(p *pkginfo.PkgInfo) []PkgInstallSet {
 			}
 		}
 	}
-	
+
 	return pkgs
 }
 
 // TODO actually check if that dep is enabled or not in the pkginfo
 func (repo *Repo) UninstallList(p *pkginfo.PkgInfo) []PkgInstallSet {
-	pkgs := make([]PkgInstallSet,0)
-	
-	var inner func (*pkginfo.PkgInfo)
-	
-	inner = func (cur *pkginfo.PkgInfo) {
+	pkgs := make([]PkgInstallSet, 0)
+
+	var inner func(*pkginfo.PkgInfo)
+
+	inner = func(cur *pkginfo.PkgInfo) {
 		for _, pkg := range pkgs {
 			if pkg.Control.Name == cur.Name {
 				return
 			}
 		}
-		
+
 		for _, set := range *repo.installed {
 			for _, dep := range set.Control.Deps {
 				if dep == cur.Name {
@@ -209,8 +212,8 @@ func (repo *Repo) UninstallList(p *pkginfo.PkgInfo) []PkgInstallSet {
 			}
 		}
 	}
-	
+
 	inner(p)
-	
+
 	return pkgs
 }

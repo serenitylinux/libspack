@@ -2,10 +2,10 @@ package pkgdep
 
 import (
 	"fmt"
-	"github.com/serenitylinux/libspack"
 	"github.com/cam72cam/go-lumberjack/log"
-	"github.com/serenitylinux/libspack/misc"
+	"github.com/serenitylinux/libspack"
 	"github.com/serenitylinux/libspack/constraintconfig"
+	"github.com/serenitylinux/libspack/misc"
 )
 
 type PkgDepList []*PkgDep
@@ -30,8 +30,8 @@ func (list *PkgDepList) Append(e *PkgDep) {
 //http://blog.golang.org/slices Magics!
 func (list *PkgDepList) Prepend(e *PkgDep) {
 	*list = (*list)[0 : len(*list)+1] //Increase size by 1
-	copy((*list)[1:], (*list)[0:])   //shift array up by 1
-	(*list)[0] = e                  //set new first element
+	copy((*list)[1:], (*list)[0:])    //shift array up by 1
+	(*list)[0] = e                    //set new first element
 }
 
 func (list *PkgDepList) Print() {
@@ -62,33 +62,33 @@ func (list *PkgDepList) Add(depname string, destdir string) *PkgDep {
 		log.Error.Println("Unable to find repo for ", depname)
 		return nil
 	}
-	
+
 	depnode := New(depname, repo)
 	list.Append(depnode)
-	
+
 	depnode.Graph = list
-	
+
 	//Add global flags to new depnode
 	globalconstraint, exists := constraintconfig.GetAll(destdir)[depname]
 	if exists {
 		depnode.Constraints.AppendOther("Global Package Config", globalconstraint)
 	}
-	
+
 	if !depnode.Exists() {
 		log.Error.Println(depname, " unable to satisfy parents") //TODO more info
 	}
-	
+
 	return depnode
 }
 func (list *PkgDepList) ToInstall(destdir string) *PkgDepList {
 	newl := make(PkgDepList, 0)
-	
+
 	for _, pkg := range *list {
 		if !pkg.ForgeOnly && !pkg.IsInstalled(destdir) {
 			newl.Append(pkg)
 		}
 	}
-	
+
 	return &newl
 }
 func (list *PkgDepList) CheckPackageFlags() bool {

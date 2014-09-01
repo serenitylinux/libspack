@@ -1,19 +1,19 @@
 package misc
 
 import (
+	"bufio"
+	"bytes"
+	"github.com/cam72cam/go-lumberjack/color"
 	"io"
 	"os"
 	"os/exec"
-	"syscall"
-	"strings"
-	"bufio"
-	"bytes"
 	"regexp"
 	"strconv"
-	"github.com/cam72cam/go-lumberjack/color"
+	"strings"
+	"syscall"
 )
 
-func GetWidth() int{
+func GetWidth() int {
 	var buf bytes.Buffer
 	cmd := exec.Command("tput", "cols")
 	cmd.Stdout = &buf
@@ -30,20 +30,23 @@ func GetWidth() int{
 }
 
 var Bar = strings.Repeat("=", GetWidth()) + "\n"
+
 func LogBar(l io.Writer, c color.Code) {
 	l.Write([]byte(c.String(Bar)))
 }
 
-func WithFileReader(filename string, action func (io.Reader)) error {
+func WithFileReader(filename string, action func(io.Reader)) error {
 	file, ioerr := os.Open(filename)
-	if ioerr != nil { return ioerr }
-	
+	if ioerr != nil {
+		return ioerr
+	}
+
 	action(bufio.NewReader(file))
-	
+
 	return file.Close()
 }
 
-func WithFileWriter(filename string, create bool, action func (io.Writer)) error {
+func WithFileWriter(filename string, create bool, action func(io.Writer)) error {
 	var file *os.File
 	var err error
 	if create {
@@ -51,14 +54,18 @@ func WithFileWriter(filename string, create bool, action func (io.Writer)) error
 	} else {
 		file, err = os.Open(filename)
 	}
-	if err != nil { return err }
-	
+	if err != nil {
+		return err
+	}
+
 	writer := bufio.NewWriter(file)
 	action(writer)
-	
+
 	err = writer.Flush()
-	if err != nil { return err }
-	
+	if err != nil {
+		return err
+	}
+
 	return file.Close()
 }
 
@@ -66,9 +73,9 @@ func WithFileWriter(filename string, create bool, action func (io.Writer)) error
 //Christian Mesh 2014
 func CopyFile(src, dest string) error {
 	var err, e error
-	
-	e = WithFileWriter(dest, true, func (writer io.Writer) {
-		e = WithFileReader(src, func (reader io.Reader) {
+
+	e = WithFileWriter(dest, true, func(writer io.Writer) {
+		e = WithFileReader(src, func(reader io.Reader) {
 			_, e = io.Copy(writer, reader)
 			if e != nil {
 				err = e
@@ -81,10 +88,9 @@ func CopyFile(src, dest string) error {
 	if e != nil {
 		err = e
 	}
-	
+
 	return err
 }
-
 
 func InDir(path string, action func()) error {
 	prevDir, _ := os.Getwd()
@@ -117,8 +123,10 @@ func RunCommandToString(cmd *exec.Cmd) (string, error) {
 	cmd.Stdout = &buf
 	cmd.Stderr = os.Stderr
 	err := cmd.Run()
-	if err != nil { return "", err	}
-	
+	if err != nil {
+		return "", err
+	}
+
 	return buf.String(), nil
 }
 
@@ -129,16 +137,15 @@ func ReaderToString(reader io.Reader) string {
 }
 
 func RunCommandToStdOutErr(cmd *exec.Cmd) (err error) {
-	return RunCommand(cmd, os.Stdout, os.Stderr);
+	return RunCommand(cmd, os.Stdout, os.Stderr)
 }
 
 func RunCommand(cmd *exec.Cmd, stdout io.Writer, stderr io.Writer) error {
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
-	
+
 	return cmd.Run()
 }
-
 
 var GitRegex = regexp.MustCompile(".*\\.git")
 var RsyncRegex = regexp.MustCompile("rsync://.*")

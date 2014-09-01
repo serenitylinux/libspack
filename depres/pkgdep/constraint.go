@@ -1,18 +1,19 @@
 package pkgdep
 
 import (
-	"strings"
-	"github.com/serenitylinux/libspack/dep"
-	"github.com/serenitylinux/libspack/flag"
 	"github.com/cam72cam/go-lumberjack/color"
 	"github.com/cam72cam/go-lumberjack/log"
+	"github.com/serenitylinux/libspack/dep"
+	"github.com/serenitylinux/libspack/flag"
+	"strings"
 )
 
 type Constraint struct {
 	Parent *PkgDep
-	dep dep.Dep
+	dep    dep.Dep
 	reason string
 }
+
 func (c *Constraint) String() string {
 	if c.Parent == nil {
 		return c.reason
@@ -25,7 +26,7 @@ type ConstraintList []Constraint
 
 func (l *ConstraintList) Contains(p *PkgDep) bool {
 	for _, n := range *l {
-		if p == n.Parent{
+		if p == n.Parent {
 			return true
 		}
 	}
@@ -33,17 +34,17 @@ func (l *ConstraintList) Contains(p *PkgDep) bool {
 }
 
 func (l *ConstraintList) AppendParent(p *PkgDep, deps dep.Dep) {
-	*l = append(*l, Constraint { p, deps, "Required by " + p.Name });
+	*l = append(*l, Constraint{p, deps, "Required by " + p.Name})
 }
 
 func (l *ConstraintList) AppendOther(reason string, deps dep.Dep) {
-	*l = append(*l, Constraint { nil, deps, reason });
+	*l = append(*l, Constraint{nil, deps, reason})
 }
 
-func (l *ConstraintList) ComputedFlags(p *PkgDep) (*flag.FlagList) {
-	defaultf := p.Control().DefaultFlags();
+func (l *ConstraintList) ComputedFlags(p *PkgDep) *flag.FlagList {
+	defaultf := p.Control().DefaultFlags()
 	newlist := make(flag.FlagList, 0)
-	
+
 	//Sum up all of the constraints
 	for _, c := range *l {
 		if c.dep.Flags != nil {
@@ -60,7 +61,7 @@ func (l *ConstraintList) ComputedFlags(p *PkgDep) (*flag.FlagList) {
 			}
 		}
 	}
-	
+
 	//merge constraints with defaults
 	for _, deffl := range defaultf {
 		if _, exists := newlist.Contains(deffl.Name); !exists {
@@ -68,15 +69,15 @@ func (l *ConstraintList) ComputedFlags(p *PkgDep) (*flag.FlagList) {
 			newlist.Append(deffl)
 		}
 	}
-	
+
 	return &newlist
 }
 
 type VersionChecker func(string) bool
 
 func (l *ConstraintList) ComputedVersionChecker() VersionChecker {
-	versions := make([]*dep.Version,0)
-	
+	versions := make([]*dep.Version, 0)
+
 	for _, c := range *l {
 		if c.dep.Version1 != nil {
 			versions = append(versions, c.dep.Version1)
@@ -85,14 +86,14 @@ func (l *ConstraintList) ComputedVersionChecker() VersionChecker {
 			versions = append(versions, c.dep.Version2)
 		}
 	}
-	
+
 	return func(str string) bool {
 		for _, v := range versions {
-			if ! v.Accepts(str) {
+			if !v.Accepts(str) {
 				return false
 			}
 		}
-		
+
 		return true
 	}
 }
@@ -119,9 +120,9 @@ func (l *ConstraintList) PrintError(prefix string) {
 			max = ln
 		}
 	}
-	
+
 	for _, c := range *l {
-		str := prefix + c.String() + ":" + strings.Repeat(" ", max - len(color.Strip(c.String()))) + "  " + c.dep.String() + "\n"
+		str := prefix + c.String() + ":" + strings.Repeat(" ", max-len(color.Strip(c.String()))) + "  " + c.dep.String() + "\n"
 		log.Error.Write([]byte(str))
 	}
 }

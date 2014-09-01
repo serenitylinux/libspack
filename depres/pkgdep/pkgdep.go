@@ -2,14 +2,14 @@ package pkgdep
 
 import (
 	"fmt"
+	"github.com/cam72cam/go-lumberjack/color"
+	"github.com/cam72cam/go-lumberjack/log"
 	"github.com/serenitylinux/libspack"
+	"github.com/serenitylinux/libspack/control"
 	"github.com/serenitylinux/libspack/dep"
 	"github.com/serenitylinux/libspack/flag"
-	"github.com/serenitylinux/libspack/repo"
-	"github.com/serenitylinux/libspack/control"
 	"github.com/serenitylinux/libspack/pkginfo"
-	"github.com/cam72cam/go-lumberjack/log"
-	"github.com/cam72cam/go-lumberjack/color"
+	"github.com/serenitylinux/libspack/repo"
 )
 
 /******************************************
@@ -17,22 +17,22 @@ Represents an installable package and it's rdeps
 *******************************************/
 type PkgDep struct {
 	Name string
-//	Control *control.Control //is tied to a version  should be computed
+	//	Control *control.Control //is tied to a version  should be computed
 	Repo *repo.Repo
-//	FlagStates dep.FlagSet //should be computed
-	Dirty bool
+	//	FlagStates dep.FlagSet //should be computed
+	Dirty       bool
 	IsReinstall bool
-	ForgeOnly bool
-	
+	ForgeOnly   bool
+
 	Constraints ConstraintList
-	
+
 	Graph *PkgDepList
 }
 
 func New(name string, r *repo.Repo) *PkgDep {
-	new_pd := PkgDep { Name: name, Repo: r, Dirty: true, ForgeOnly: false }
+	new_pd := PkgDep{Name: name, Repo: r, Dirty: true, ForgeOnly: false}
 	new_pd.Constraints = make(ConstraintList, 0)
-	
+
 	return &new_pd
 }
 func (pd *PkgDep) String() string {
@@ -58,8 +58,7 @@ func (pd *PkgDep) AddRdepConstraints(destdir string) {
 			if pd.Graph == nil {
 				log.Error.Println("WAT" + pd.Name)
 			}
-			
-			
+
 			//Copy pasta from depres
 			depnode := pd.Graph.Find(rdep.Control.Name)
 			//We are not part of the graph yet
@@ -67,17 +66,16 @@ func (pd *PkgDep) AddRdepConstraints(destdir string) {
 				depnode = pd.Graph.Add(rdep.Control.Name, destdir)
 				depnode.AddRdepConstraints(destdir)
 			}
-			
-			
+
 			var reason dep.Dep
 			found := false
-			
+
 			curr_control := depnode.Control()
 			curr_pkginfo := depnode.PkgInfo()
-			
+
 			all_flags := curr_pkginfo.ComputedFlagStates() //rdep.PkgInfo.ComputedFlagStates()
-			all_deps := curr_control.ParsedDeps() //rdep.Control.ParsedDeps()
-			
+			all_deps := curr_control.ParsedDeps()          //rdep.Control.ParsedDeps()
+
 			for _, d := range all_deps.EnabledFromFlags(all_flags) {
 				if d.Name == pd.Name {
 					reason = d
@@ -85,17 +83,17 @@ func (pd *PkgDep) AddRdepConstraints(destdir string) {
 					break
 				}
 			}
-			
+
 			//This really should not happen
 			if !found {
 				log.Error.Printlnf("Unable to figure out why %s is a dep of %s, we may have reconstructed the on disk graph of packages incorrectly",
 					pd.Name, depnode.Name)
 				break
 			}
-			
+
 			//Should return true, if not we have a serious problem with the packages on disk
 			if !pd.AddParent(depnode, reason) {
-				log.Error.Write([]byte("Conflicting package constraints on " + color.Red.String("already installed") +  " package " + pd.Name + ":" + "\n"))
+				log.Error.Write([]byte("Conflicting package constraints on " + color.Red.String("already installed") + " package " + pd.Name + ":" + "\n"))
 				depnode.Constraints.PrintError("\t")
 			}
 		}
@@ -117,11 +115,11 @@ func (pd *PkgDep) Control() *control.Control {
 func (pd *PkgDep) PkgInfo() *pkginfo.PkgInfo {
 	p := pkginfo.FromControl(pd.Control())
 	flags := pd.ComputedFlags()
-	
-	if flags == nil { 
+
+	if flags == nil {
 		return nil
 	}
-	
+
 	for _, flag := range *flags {
 		p.SetFlagState(&flag)
 	}

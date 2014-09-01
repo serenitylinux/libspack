@@ -1,8 +1,7 @@
 package flag
 
-import (
+import ()
 
-)
 //TODO map[string]Flag
 type FlagList []Flag
 
@@ -53,12 +52,12 @@ func (l *FlagList) Append(f Flag) {
 	*l = append(*l, f)
 }
 
-func (l *FlagList) Clone() (*FlagList) {
+func (l *FlagList) Clone() *FlagList {
 	newl := make(FlagList, len(*l))
-	
+
 	for i, flag := range *l {
-		newl[i] = Flag { flag.Name, flag.Enabled }
+		newl[i] = Flag{flag.Name, flag.Enabled}
 	}
-	
+
 	return &newl
 }

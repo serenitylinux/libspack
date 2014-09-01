@@ -1,32 +1,36 @@
 package git
 
 import (
+	"github.com/serenitylinux/libspack/misc"
 	"os"
 	"os/exec"
-	"github.com/serenitylinux/libspack/misc"
 )
 
-func Clone (url string, dir string) (err error) {
-	ioerr := misc.InDir(dir, func () { 
+func Clone(url string, dir string) (err error) {
+	ioerr := misc.InDir(dir, func() {
 		err = misc.RunCommandToStdOutErr(exec.Command("git", "clone", url, "."))
 	})
-	if ioerr != nil { return ioerr }
-	return 
+	if ioerr != nil {
+		return ioerr
+	}
+	return
 }
 
 func Update(url string, dir string) (err error) {
-	ioerr := misc.InDir(dir, func () { 
+	ioerr := misc.InDir(dir, func() {
 		err = misc.RunCommandToStdOutErr(exec.Command("git", "pull"))
 	})
-	if ioerr != nil { return ioerr }
-	return 
+	if ioerr != nil {
+		return ioerr
+	}
+	return
 }
 
 func CloneOrUpdate(url string, dir string) error {
 	//If repo exists
-	if _,err := os.Stat(dir + "/.git"); err == nil {
+	if _, err := os.Stat(dir + "/.git"); err == nil {
 		return Update(url, dir)
 	} else {
-		return Clone(url,dir)
+		return Clone(url, dir)
 	}
 }

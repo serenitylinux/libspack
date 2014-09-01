@@ -1,25 +1,25 @@
 package hash
 
 import (
-	"fmt"
-	"io"
 	"crypto/md5"
+	"fmt"
 	"github.com/serenitylinux/libspack/helpers/json"
+	"io"
 )
 
 import . "github.com/serenitylinux/libspack/misc"
 
 func Md5sum(filename string) (sum string, err error) {
 	h := md5.New()
-	ioerr := WithFileReader(filename, func (reader io.Reader) {
+	ioerr := WithFileReader(filename, func(reader io.Reader) {
 		io.Copy(h, reader)
 		sum = fmt.Sprintf("%x", h.Sum(nil))
 	})
-	
+
 	if ioerr != nil {
 		return "", ioerr
 	}
-	
+
 	return
 }
 

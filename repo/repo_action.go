@@ -1,23 +1,23 @@
 package repo
 
 import (
-	"fmt"
 	"errors"
-	"os"
-	"net/url"
+	"fmt"
 	"github.com/cam72cam/go-lumberjack/log"
-	"github.com/serenitylinux/libspack/hash"
-	"github.com/serenitylinux/libspack/spakg"
-	"github.com/serenitylinux/libspack/pkginfo"
 	"github.com/serenitylinux/libspack/control"
+	"github.com/serenitylinux/libspack/hash"
 	"github.com/serenitylinux/libspack/helpers/http"
+	"github.com/serenitylinux/libspack/pkginfo"
+	"github.com/serenitylinux/libspack/spakg"
+	"net/url"
+	"os"
 )
 import . "github.com/serenitylinux/libspack/misc"
 
 func (repo *Repo) FetchIfNotCachedSpakg(p *pkginfo.PkgInfo) error {
 	out := repo.GetSpakgOutput(p)
 	if !PathExists(out) {
-		if(repo.HasRemoteSpakg(p)) {
+		if repo.HasRemoteSpakg(p) {
 			src := repo.RemotePackages + "/pkgs/" + url.QueryEscape(fmt.Sprintf("%s.spakg", p.UUID()))
 			log.Info.Format("Fetching %s", src)
 			err := http.HttpFetchFileProgress(src, out, true)
@@ -38,15 +38,15 @@ func (repo *Repo) InstallSpakg(spkg *spakg.Spakg, basedir string) error {
 
 func (repo *Repo) Install(c control.Control, p pkginfo.PkgInfo, hl hash.HashList, basedir string) error {
 	old := repo.GetInstalledByName(c.Name, basedir)
-	
-	ps := NewPkgIS(&c,&p,hl);
-	err := os.MkdirAll(basedir + repo.installedPkgsDir(), 0755)
+
+	ps := NewPkgIS(&c, &p, hl)
+	err := os.MkdirAll(basedir+repo.installedPkgsDir(), 0755)
 	if err != nil {
 		return err
 	}
-	
+
 	err = ps.ToFile(repo.installSetFile(p, basedir))
-	
+
 	if old != nil && old.PkgInfo.UUID() != p.UUID() {
 		for file, _ := range old.Hashes {
 			if _, exists := hl[file]; !exists {
@@ -58,7 +58,7 @@ func (repo *Repo) Install(c control.Control, p pkginfo.PkgInfo, hl hash.HashList
 		}
 		repo.MarkRemoved(old.PkgInfo, basedir)
 	}
-	
+
 	repo.loadInstalledPackagesList()
 	return err
 }
@@ -70,7 +70,7 @@ func (repo *Repo) MarkRemoved(p *pkginfo.PkgInfo, basedir string) error {
 func (repo *Repo) Uninstall(p *pkginfo.PkgInfo, destdir string) error {
 	inst := repo.GetInstalled(p, destdir)
 	basedir := "/"
-	if (inst != nil) {
+	if inst != nil {
 		log.Info.Format("Removing %s", inst.PkgInfo.UUID())
 		for f, _ := range inst.Hashes {
 			log.Debug.Println("Remove: " + basedir + f)

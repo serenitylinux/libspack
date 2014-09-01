@@ -26,19 +26,19 @@ FlagSet:
 */
 
 import (
-	"fmt"
-	"strings"
 	"errors"
-	"github.com/serenitylinux/libspack/parser"
+	"fmt"
 	"github.com/serenitylinux/libspack/flag"
+	"github.com/serenitylinux/libspack/parser"
+	"strings"
 )
 
 type Dep struct {
 	Condition *flag.Flag
-	Name string
-	Version1 *Version
-	Version2 *Version
-	Flags *flag.FlagList
+	Name      string
+	Version1  *Version
+	Version2  *Version
+	Flags     *flag.FlagList
 }
 
 func (d *Dep) String() string {
@@ -60,30 +60,31 @@ type Version struct {
 	typ int
 	ver string
 }
+
 func (v *Version) String() string {
 	s := ""
 	if v == nil {
 		return s
 	}
-	
+
 	switch v.typ {
-		case GT:
-			s = ">"
-		case LT:
-			s = "<"
-		case EQ:
-			s = "="
+	case GT:
+		s = ">"
+	case LT:
+		s = "<"
+	case EQ:
+		s = "="
 	}
 	return s + v.ver
 }
 func (v *Version) Accepts(verstr string) bool {
 	switch v.typ {
-		case GT:
-			return verstr > v.ver
-		case LT:
-			return verstr < v.ver
-		case EQ:
-			return verstr == v.ver
+	case GT:
+		return verstr > v.ver
+	case LT:
+		return verstr < v.ver
+	case EQ:
+		return verstr == v.ver
 	}
 	panic(errors.New(fmt.Sprintf("Invalid version value: %d", v.typ)))
 }
@@ -109,75 +110,83 @@ func Parse(s string) (Dep, error) {
 func (d *Dep) parse(in *parser.Input) error {
 	if conditionPeek(in) {
 		in.Next(1)
-		
+
 		new, err := flag.Parse(in)
-		if err != nil { return err }
-		
+		if err != nil {
+			return err
+		}
+
 		d.Condition = new
-		
+
 		if !in.IsNext("]") {
 			return errors.New("Expected ']' at end of condition")
 		}
 	}
-	
+
 	d.Name = in.ReadUntill("<>=()")
 	if len(d.Name) == 0 {
 		return errors.New("Must specify dep package name")
 	}
-	
+
 	if versionPeek(in) {
 		var new Version
 		err := new.parse(in)
-		if err != nil { return err }
+		if err != nil {
+			return err
+		}
 		d.Version1 = &new
 	}
-	
+
 	if versionPeek(in) && d.Version1.typ != EQ {
 		var new Version
 		err := new.parse(in)
-		if err != nil { return err }
+		if err != nil {
+			return err
+		}
 		d.Version2 = &new
 	}
-	
+
 	//no requirements
 	if !in.HasNext(1) {
 		return nil
 	}
-	
+
 	new := make(flag.FlagList, 0)
 	err := parseFlagSet(&new, in)
 	if err != nil {
 		return err
 	}
 	d.Flags = &new
-	
+
 	if in.HasNext(1) {
 		return errors.New("Finished parsing, trailing chars '" + in.Rest() + "'")
 	}
-	
+
 	return nil
 }
 
-func parseFlagSet(s *flag.FlagList, in *parser.Input) error {	
+func parseFlagSet(s *flag.FlagList, in *parser.Input) error {
 	if !in.IsNext("(") {
 		return errors.New("Expected '(' to start flag set")
 	}
-	
+
 	for {
 		flag, err := flag.Parse(in)
-		if err != nil { return err }
-		
+		if err != nil {
+			return err
+		}
+
 		*s = append(*s, *flag)
-		
+
 		str, _ := in.Next(1)
 		if str != "," {
 			//We are at the end
-			
+
 			if str != ")" {
 				return errors.New("Invalid char '" + str + "', expected ')'")
 			}
-			
-			break;
+
+			break
 		}
 	}
 	return nil
@@ -186,10 +195,14 @@ func parseFlagSet(s *flag.FlagList, in *parser.Input) error {
 func (v *Version) parse(in *parser.Input) error {
 	s, _ := in.Next(2)
 	switch s {
-		case ">=": v.typ = GT
-		case "<=": v.typ = LT
-		case "==": v.typ = EQ
-		default:   return errors.New("Invalid condition '" + s + "', expected [<>=]=")
+	case ">=":
+		v.typ = GT
+	case "<=":
+		v.typ = LT
+	case "==":
+		v.typ = EQ
+	default:
+		return errors.New("Invalid condition '" + s + "', expected [<>=]=")
 	}
 	v.ver = in.ReadUntill("<>=(")
 	if len(v.ver) == 0 {
@@ -198,8 +211,8 @@ func (v *Version) parse(in *parser.Input) error {
 	return nil
 }
 
-
 type DepList []Dep
+
 func (list *DepList) EnabledFromFlags(fs flag.FlagList) DepList {
 	res := make(DepList, 0)
 	for _, dep := range *list {
@@ -208,11 +221,11 @@ func (list *DepList) EnabledFromFlags(fs flag.FlagList) DepList {
 			res = append(res, dep)
 			continue
 		}
-		
+
 		for _, flag := range fs {
 			if *dep.Condition == flag {
 				res = append(res, dep)
-				break;
+				break
 			}
 		}
 	}
@@ -221,10 +234,10 @@ func (list *DepList) EnabledFromFlags(fs flag.FlagList) DepList {
 
 func (list *DepList) String() string {
 	str := ""
-	
+
 	for _, d := range *list {
 		str += d.String() + " "
 	}
-	
+
 	return str
 }
