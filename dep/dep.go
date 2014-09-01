@@ -29,8 +29,8 @@ import (
 	"fmt"
 	"strings"
 	"errors"
-	"github.com/serenitylinux/spack/libspack/parser"
-	"github.com/serenitylinux/spack/libspack/flag"
+	"github.com/serenitylinux/libspack/parser"
+	"github.com/serenitylinux/libspack/flag"
 )
 
 type Dep struct {

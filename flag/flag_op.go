@@ -2,7 +2,7 @@ package flag
 
 import (
 	"errors"
-	"github.com/serenitylinux/spack/libspack/parser"
+	"github.com/serenitylinux/libspack/parser"
 )
 
 const (

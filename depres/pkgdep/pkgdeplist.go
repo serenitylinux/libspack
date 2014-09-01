@@ -2,10 +2,10 @@ package pkgdep
 
 import (
 	"fmt"
-	"github.com/serenitylinux/spack/libspack"
+	"github.com/serenitylinux/libspack"
 	"github.com/cam72cam/go-lumberjack/log"
-	"github.com/serenitylinux/spack/libspack/misc"
-	"github.com/serenitylinux/spack/libspack/constraintconfig"
+	"github.com/serenitylinux/libspack/misc"
+	"github.com/serenitylinux/libspack/constraintconfig"
 )
 
 type PkgDepList []*PkgDep

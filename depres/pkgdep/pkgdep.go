@@ -2,12 +2,12 @@ package pkgdep
 
 import (
 	"fmt"
-	"github.com/serenitylinux/spack/libspack"
-	"github.com/serenitylinux/spack/libspack/dep"
-	"github.com/serenitylinux/spack/libspack/flag"
-	"github.com/serenitylinux/spack/libspack/repo"
-	"github.com/serenitylinux/spack/libspack/control"
-	"github.com/serenitylinux/spack/libspack/pkginfo"
+	"github.com/serenitylinux/libspack"
+	"github.com/serenitylinux/libspack/dep"
+	"github.com/serenitylinux/libspack/flag"
+	"github.com/serenitylinux/libspack/repo"
+	"github.com/serenitylinux/libspack/control"
+	"github.com/serenitylinux/libspack/pkginfo"
 	"github.com/cam72cam/go-lumberjack/log"
 	"github.com/cam72cam/go-lumberjack/color"
 )

@@ -41,9 +41,9 @@ Install no build := PkgSets
 package repo
 
 import (
-	"github.com/serenitylinux/spack/libspack/pkginfo"
-	"github.com/serenitylinux/spack/libspack/control"
-	"github.com/serenitylinux/spack/libspack/helpers/json"
+	"github.com/serenitylinux/libspack/pkginfo"
+	"github.com/serenitylinux/libspack/control"
+	"github.com/serenitylinux/libspack/helpers/json"
 )
 
 //Sorted by pkgversion

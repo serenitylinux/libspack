@@ -6,13 +6,13 @@ import (
 	"os"
 	"net/url"
 	"github.com/cam72cam/go-lumberjack/log"
-	"github.com/serenitylinux/spack/libspack/hash"
-	"github.com/serenitylinux/spack/libspack/spakg"
-	"github.com/serenitylinux/spack/libspack/pkginfo"
-	"github.com/serenitylinux/spack/libspack/control"
-	"github.com/serenitylinux/spack/libspack/helpers/http"
+	"github.com/serenitylinux/libspack/hash"
+	"github.com/serenitylinux/libspack/spakg"
+	"github.com/serenitylinux/libspack/pkginfo"
+	"github.com/serenitylinux/libspack/control"
+	"github.com/serenitylinux/libspack/helpers/http"
 )
-import . "github.com/serenitylinux/spack/libspack/misc"
+import . "github.com/serenitylinux/libspack/misc"
 
 func (repo *Repo) FetchIfNotCachedSpakg(p *pkginfo.PkgInfo) error {
 	out := repo.GetSpakgOutput(p)

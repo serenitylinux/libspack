@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"io"
 	"crypto/md5"
-	"github.com/serenitylinux/spack/libspack/helpers/json"
+	"github.com/serenitylinux/libspack/helpers/json"
 )
 
-import . "github.com/serenitylinux/spack/libspack/misc"
+import . "github.com/serenitylinux/libspack/misc"
 
 func Md5sum(filename string) (sum string, err error) {
 	h := md5.New()

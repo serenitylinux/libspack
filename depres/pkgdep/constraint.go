@@ -2,8 +2,8 @@ package pkgdep
 
 import (
 	"strings"
-	"github.com/serenitylinux/spack/libspack/dep"
-	"github.com/serenitylinux/spack/libspack/flag"
+	"github.com/serenitylinux/libspack/dep"
+	"github.com/serenitylinux/libspack/flag"
 	"github.com/cam72cam/go-lumberjack/color"
 	"github.com/cam72cam/go-lumberjack/log"
 )

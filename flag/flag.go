@@ -19,7 +19,7 @@ flag = '[+,-]s*'
 import (
 	"errors"
 	"strings"
-	"github.com/serenitylinux/spack/libspack/parser"
+	"github.com/serenitylinux/libspack/parser"
 	"github.com/cam72cam/go-lumberjack/color"
 )
 

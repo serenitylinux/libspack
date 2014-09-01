@@ -1,7 +1,7 @@
 package flag
 
 import (
-	"github.com/serenitylinux/spack/libspack/parser"
+	"github.com/serenitylinux/libspack/parser"
 )
 
 type exprlist struct {

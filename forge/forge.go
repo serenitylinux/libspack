@@ -14,17 +14,17 @@ import (
 	"path"
 	"path/filepath"
 	"github.com/cam72cam/go-lumberjack/log"
-	"github.com/serenitylinux/spack/libspack/flag"
-	"github.com/serenitylinux/spack/libspack/spakg"
-	"github.com/serenitylinux/spack/libspack/pkginfo"
-	"github.com/serenitylinux/spack/libspack/control"
-	"github.com/serenitylinux/spack/libspack/helpers/git"
-	"github.com/serenitylinux/spack/libspack/helpers/http"
+	"github.com/serenitylinux/libspack/flag"
+	"github.com/serenitylinux/libspack/spakg"
+	"github.com/serenitylinux/libspack/pkginfo"
+	"github.com/serenitylinux/libspack/control"
+	"github.com/serenitylinux/libspack/helpers/git"
+	"github.com/serenitylinux/libspack/helpers/http"
 )
 
-import . "github.com/serenitylinux/spack/libspack"
-import . "github.com/serenitylinux/spack/libspack/misc"
-import . "github.com/serenitylinux/spack/libspack/hash"
+import . "github.com/serenitylinux/libspack"
+import . "github.com/serenitylinux/libspack/misc"
+import . "github.com/serenitylinux/libspack/hash"
 
 func extractPkgSrc(srcPath string, outDir string) error {
 	tarRegex := regexp.MustCompile(".*\\.(tar|tgz).*")

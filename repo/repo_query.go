@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"path/filepath"
 	"github.com/cam72cam/go-lumberjack/log"
-	"github.com/serenitylinux/spack/libspack/control"
-	"github.com/serenitylinux/spack/libspack/pkginfo"
+	"github.com/serenitylinux/libspack/control"
+	"github.com/serenitylinux/libspack/pkginfo"
 )
 
-import . "github.com/serenitylinux/spack/libspack/misc"
+import . "github.com/serenitylinux/libspack/misc"
 
 func (repo *Repo) GetAllControls() ControlMap {
 	return *repo.controls

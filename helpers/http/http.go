@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"errors"
 	"net/http"
-	"github.com/serenitylinux/spack/libspack/progress"
+	"github.com/serenitylinux/libspack/progress"
 )
 
 func HttpFetchFileProgress(url string, outFile string, stdout bool) (err error) {

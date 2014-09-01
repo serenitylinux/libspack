@@ -3,7 +3,7 @@ package flag
 import (
 	"errors"
 	"strings"
-	"github.com/serenitylinux/spack/libspack/parser"
+	"github.com/serenitylinux/libspack/parser"
 )
 
 type FlagSet struct {

@@ -3,7 +3,7 @@ package git
 import (
 	"os"
 	"os/exec"
-	"github.com/serenitylinux/spack/libspack/misc"
+	"github.com/serenitylinux/libspack/misc"
 )
 
 func Clone (url string, dir string) (err error) {

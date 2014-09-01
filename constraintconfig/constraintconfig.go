@@ -7,8 +7,8 @@ import (
 	"bufio"
 	"path/filepath"
 	"github.com/cam72cam/go-lumberjack/log"
-	"github.com/serenitylinux/spack/libspack/misc"
-	"github.com/serenitylinux/spack/libspack/dep"
+	"github.com/serenitylinux/libspack/misc"
+	"github.com/serenitylinux/libspack/dep"
 )
 
 type ConstraintList map[string]dep.Dep

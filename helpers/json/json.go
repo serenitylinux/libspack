@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"encoding/json"
 )
-import . "github.com/serenitylinux/spack/libspack/misc"
+import . "github.com/serenitylinux/libspack/misc"
 
 func DecodeReader(reader io.Reader, item interface{}) error {
 	dec := json.NewDecoder(reader)

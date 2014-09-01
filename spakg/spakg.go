@@ -7,11 +7,11 @@ import (
 	"errors"
 	"time"
 	"archive/tar"
-	"github.com/serenitylinux/spack/libspack/pkginfo"
-	"github.com/serenitylinux/spack/libspack/control"
-	"github.com/serenitylinux/spack/libspack/hash"
-	"github.com/serenitylinux/spack/libspack/misc"
-	"github.com/serenitylinux/spack/libspack/helpers/json"
+	"github.com/serenitylinux/libspack/pkginfo"
+	"github.com/serenitylinux/libspack/control"
+	"github.com/serenitylinux/libspack/hash"
+	"github.com/serenitylinux/libspack/misc"
+	"github.com/serenitylinux/libspack/helpers/json"
 )
 
 const (

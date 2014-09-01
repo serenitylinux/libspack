@@ -8,8 +8,8 @@ package depres
 import (
 	"strings"
 	"github.com/cam72cam/go-lumberjack/log"
-	"github.com/serenitylinux/spack/libspack/dep"
-	"github.com/serenitylinux/spack/libspack/depres/pkgdep"
+	"github.com/serenitylinux/libspack/dep"
+	"github.com/serenitylinux/libspack/depres/pkgdep"
 )
 
 type DepResParams struct {

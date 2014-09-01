@@ -4,7 +4,7 @@ import (
 	"io"
 	"fmt"
 	"strings"
-	"github.com/serenitylinux/spack/libspack/misc"
+	"github.com/serenitylinux/libspack/misc"
 )
 
 type ProgressBar struct {

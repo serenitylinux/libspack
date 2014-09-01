@@ -5,10 +5,10 @@ import (
 	"io"
 	"time"
 	"hash/crc32"
-	"github.com/serenitylinux/spack/libspack/control"
-	"github.com/serenitylinux/spack/libspack/flag"
+	"github.com/serenitylinux/libspack/control"
+	"github.com/serenitylinux/libspack/flag"
 	"github.com/cam72cam/go-lumberjack/log"
-	"github.com/serenitylinux/spack/libspack/helpers/json"
+	"github.com/serenitylinux/libspack/helpers/json"
 )
 
 

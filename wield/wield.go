@@ -7,12 +7,12 @@ import (
 	"os/exec"
 	"io/ioutil"
 	"path/filepath"
-	"github.com/serenitylinux/spack/libspack/spakg"
+	"github.com/serenitylinux/libspack/spakg"
 	"github.com/cam72cam/go-lumberjack/log"
 )
-import . "github.com/serenitylinux/spack/libspack/misc"
-import . "github.com/serenitylinux/spack/libspack/hash"
-import . "github.com/serenitylinux/spack/libspack"
+import . "github.com/serenitylinux/libspack/misc"
+import . "github.com/serenitylinux/libspack/hash"
+import . "github.com/serenitylinux/libspack"
 
 func Wield(file string, destdir string) error {
 	spkg, err := spakg.FromFile(file, nil)

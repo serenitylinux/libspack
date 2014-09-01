@@ -7,10 +7,10 @@ import (
 	"io/ioutil"
 	"github.com/cam72cam/go-lumberjack/log"
 	"github.com/cam72cam/go-lumberjack/color"
-	"github.com/serenitylinux/spack/libspack/misc"
-	"github.com/serenitylinux/spack/libspack/repo"
-	"github.com/serenitylinux/spack/libspack/control"
-	"github.com/serenitylinux/spack/libspack/pkginfo"
+	"github.com/serenitylinux/libspack/misc"
+	"github.com/serenitylinux/libspack/repo"
+	"github.com/serenitylinux/libspack/control"
+	"github.com/serenitylinux/libspack/pkginfo"
 )
 
 const reposDir = "/etc/spack/repos/"

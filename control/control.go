@@ -8,10 +8,10 @@ import (
 	"io"
 	"bytes"
 	"github.com/cam72cam/go-lumberjack/log"
-	"github.com/serenitylinux/spack/libspack/misc"
-	"github.com/serenitylinux/spack/libspack/flag"
-	"github.com/serenitylinux/spack/libspack/dep"
-	"github.com/serenitylinux/spack/libspack/helpers/json"
+	"github.com/serenitylinux/libspack/misc"
+	"github.com/serenitylinux/libspack/flag"
+	"github.com/serenitylinux/libspack/dep"
+	"github.com/serenitylinux/libspack/helpers/json"
 )
 
 type Control struct {
