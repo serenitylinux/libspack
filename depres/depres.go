@@ -55,15 +55,15 @@ func DepTree(node *pkgdep.PkgDep, params DepResParams) bool {
 	node.Dirty = false //We will be making sure we are clean in the next step
 	rethappy := true   //Clap your hands!
 
-	var deps dep.DepList
+	var alldeps dep.DepList
 	if params.IsForge {
-		deps = node.Control().ParsedBDeps()
+		alldeps = node.Control().ParsedBDeps()
 	} else {
-		deps = node.Control().ParsedDeps()
+		alldeps = node.Control().ParsedDeps()
 	}
 
 	setflags := node.ComputedFlags()
-	deps = deps.EnabledFromFlags(*setflags)
+	deps := alldeps.EnabledFromFlags(*setflags)
 
 	//	isbdep := params.IsForge //Make a copy of isForge for later
 	params.IsForge = false
@@ -104,6 +104,40 @@ func DepTree(node *pkgdep.PkgDep, params DepResParams) bool {
 			rethappy = false
 		}
 	}
+
+	// At this point we need to see if our original requirements have changed
+	// There may be a scenario where A -> B -> ... -> A(+flag) !-> B
+	// I guess we could create a phantom package B to force A(+flag)
+	// even though B would never be installed...
+	// Or we could just yell at the user if this scenario ever happened
+	// and force tell them to set a flag to fix this inconsistency.
+	// I like yelling at users, let's try that method first
+
+	// We should probably check and see if our flags have changed at all through that last
+	// dep loop.  If our deps are a super set of our deps before that last loop,
+	// We should be fine, but will need to recurse once more.  If not, we have a serious
+	// problem.  We should figure out what info would be best to print to
+	// the user in this scenario...  meh, we can get to that later.
+
+	aftersetflags := node.ComputedFlags()
+	afterdeps := deps.EnabledFromFlags(*aftersetflags)
+
+	if deps.IsSubset(afterdeps) {
+		debug("Deps are ok!")
+		if len(deps) != len(afterdeps) {
+			//We need to recurse again
+			node.Dirty = true
+			rethappy = DepTree(node, params)
+		}
+	} else {
+		debug("Deps are NOT ok")
+		log.Error.Format("Could not resolve %s, conflicting circular dependency!", node.String())
+		log.Info.Format("Before: %s", deps.String())
+		log.Info.Format("After: %s", afterdeps.String())
+		//TODO more debuging stuffs
+		rethappy = false
+	}
+
 	debug("done")
 	return rethappy
 }
