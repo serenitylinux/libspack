@@ -60,7 +60,6 @@ func hasPart(part string, spkg *spakg.Spakg) bool {
 func runPart(part string, spkg *spakg.Spakg, destdir string) error {
 	cmd := `
 		%[1]s
-		
 		if ! [ -d /dev/ ]; then
 			mkdir /dev;
 		fi
@@ -111,9 +110,14 @@ func ExtractCheckCopy(pkgfile string, destdir string) error {
 	defer os.RemoveAll(tmpDir)
 
 	pkg, err := spakg.FromFile(pkgfile, &tmpDir)
+	if err != nil {
+		return err
+	}
 
 	fsDir := tmpDir + "/fs"
-	os.MkdirAll(fsDir, 0755)
+	if err = os.MkdirAll(fsDir, 0755); err != nil {
+		return err
+	}
 
 	HeaderFormat("Unpacking %s", pkg.Control.Name)
 	cmd := exec.Command("tar", "-xvpf", tmpDir+"/fs.tar", "-C", fsDir)
@@ -184,7 +188,7 @@ func ExtractCheckCopy(pkgfile string, destdir string) error {
 			}
 		} else if f.IsDir() {
 			if !PathExists(destPath) {
-				e := os.Mkdir(destPath, f.Mode())
+				e := os.MkdirAll(destPath, f.Mode())
 				if e != nil {
 					return e
 				}
