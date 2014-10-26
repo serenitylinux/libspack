@@ -16,10 +16,8 @@ import (
 Represents an installable package and it's rdeps
 *******************************************/
 type PkgDep struct {
-	Name string
-	//	Control *control.Control //is tied to a version  should be computed
-	Repo *repo.Repo
-	//	FlagStates dep.FlagSet //should be computed
+	Name        string
+	Repo        *repo.Repo
 	Dirty       bool
 	IsReinstall bool
 	ForgeOnly   bool
@@ -51,20 +49,17 @@ func (pd *PkgDep) AddParent(parent *PkgDep, reason dep.Dep) bool {
 //Add rdeps if we are already installed
 //We need to do this because changes to us might cause problems with packages that depend on us outside of the delta tree
 //This links us into the existing "graph" on disk
-func (pd *PkgDep) AddRdepConstraints(destdir string) {
+func (pd *PkgDep) AddRdepConstraints(destdir string, prefix string) {
 	dep_info := pd.Repo.GetInstalledByName(pd.Name, destdir)
 	if dep_info != nil {
 		for _, rdep := range libspack.RdepList(dep_info.PkgInfo) {
-			if pd.Graph == nil {
-				log.Error.Println("WAT" + pd.Name)
-			}
-
 			//Copy pasta from depres
 			depnode := pd.Graph.Find(rdep.Control.Name)
 			//We are not part of the graph yet
 			if depnode == nil {
+				log.Debug.Println(prefix + "Adding rdep:" + rdep.Control.Name)
 				depnode = pd.Graph.Add(rdep.Control.Name, destdir)
-				depnode.AddRdepConstraints(destdir)
+				depnode.AddRdepConstraints(destdir, prefix)
 			}
 
 			var reason dep.Dep
@@ -142,6 +137,10 @@ func (pd *PkgDep) SpakgExists() bool {
 
 func (pd *PkgDep) IsInstalled(destdir string) bool {
 	return !pd.IsReinstall && pd.Repo.IsInstalled(pd.PkgInfo(), destdir)
+}
+
+func (pd *PkgDep) AnyInstalled(destdir string) bool {
+	return !pd.IsReinstall && pd.Repo.AnyInstalled(pd.Name, pd.Constraints.Deps(), destdir)
 }
 
 func (pd *PkgDep) FindInGraph(name string) *PkgDep {

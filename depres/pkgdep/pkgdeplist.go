@@ -80,7 +80,18 @@ func (list *PkgDepList) Add(depname string, destdir string) *PkgDep {
 
 	return depnode
 }
-func (list *PkgDepList) ToInstall(destdir string) *PkgDepList {
+func (list *PkgDepList) ToInstallRequired(destdir string) *PkgDepList {
+	newl := make(PkgDepList, 0)
+
+	for _, pkg := range *list {
+		if !pkg.ForgeOnly && !pkg.AnyInstalled(destdir) {
+			newl.Append(pkg)
+		}
+	}
+
+	return &newl
+}
+func (list *PkgDepList) ToInstallLatest(destdir string) *PkgDepList {
 	newl := make(PkgDepList, 0)
 
 	for _, pkg := range *list {

@@ -41,6 +41,14 @@ func (l *ConstraintList) AppendOther(reason string, deps dep.Dep) {
 	*l = append(*l, Constraint{nil, deps, reason})
 }
 
+func (l *ConstraintList) Deps() dep.DepList {
+	res := make(dep.DepList, len(*l))
+	for i, c := range *l {
+		res[i] = c.dep
+	}
+	return res
+}
+
 func (l *ConstraintList) ComputedFlags(p *PkgDep) *flag.FlagList {
 	defaultf := p.Control().DefaultFlags()
 	newlist := make(flag.FlagList, 0)

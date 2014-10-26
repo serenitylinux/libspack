@@ -2,11 +2,13 @@ package repo
 
 import (
 	"fmt"
-	"github.com/cam72cam/go-lumberjack/log"
-	"github.com/serenitylinux/libspack/control"
-	"github.com/serenitylinux/libspack/pkginfo"
 	"os"
 	"path/filepath"
+
+	"github.com/cam72cam/go-lumberjack/log"
+	"github.com/serenitylinux/libspack/control"
+	"github.com/serenitylinux/libspack/dep"
+	"github.com/serenitylinux/libspack/pkginfo"
 )
 
 import . "github.com/serenitylinux/libspack/misc"
@@ -99,6 +101,35 @@ func (repo *Repo) HasAnySpakg(c *control.Control) bool {
 func (repo *Repo) HasTemplate(c *control.Control) bool {
 	_, exists := repo.GetTemplateByControl(c)
 	return exists
+}
+
+func (repo *Repo) AnyInstalled(pkg string, deps dep.DepList, destdir string) bool {
+	candidates := make([]PkgInstallSet, 0)
+
+	for _, set := range *repo.installed {
+		if set.Control.Name == pkg {
+			candidates = append(candidates, set)
+		}
+	}
+
+	for _, dep := range deps {
+		next := make([]PkgInstallSet, 0)
+		for _, set := range candidates {
+			if dep.Version1 != nil && !dep.Version1.Accepts(set.PkgInfo.Version) {
+				continue
+			}
+			if dep.Version2 != nil && !dep.Version2.Accepts(set.PkgInfo.Version) {
+				continue
+			}
+			if dep.Flags != nil && !dep.Flags.IsSubSet(set.PkgInfo.ParsedFlagStates()) {
+				continue
+			}
+			next = append(next, set)
+		}
+		candidates = next
+	}
+
+	return len(candidates) != 0
 }
 
 func (repo *Repo) IsInstalled(p *pkginfo.PkgInfo, basedir string) bool {

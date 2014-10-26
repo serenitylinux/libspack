@@ -27,7 +27,7 @@ func DepTree(node *pkgdep.PkgDep, params DepResParams) bool {
 	defer func() { indent-- }()
 
 	debug := func(s string) {
-		log.Debug.Format("%s %s %s", strings.Repeat("\t", indent), node.Control().UUID(), s)
+		log.Debug.Format("%s%s %s", strings.Repeat("\t", indent), node.Control().UUID(), s)
 	}
 	debug("check")
 
@@ -78,7 +78,7 @@ func DepTree(node *pkgdep.PkgDep, params DepResParams) bool {
 		if depnode == nil {
 			depnode = node.Graph.Add(dep.Name, params.DestDir)
 			if !depnode.ForgeOnly {
-				depnode.AddRdepConstraints(params.DestDir)
+				depnode.AddRdepConstraints(params.DestDir, strings.Repeat("\t", indent+1))
 			}
 		}
 
@@ -165,9 +165,21 @@ func findToBuild(graph, orderedtreelist, visitedtreelist *pkgdep.PkgDepList, par
 	//list of packages to build
 	tobuild := make(pkgdep.PkgDepList, 0)
 
+	//Find packages we have yet to build
 	for _, node := range *graph {
-		debug("Check " + node.PkgInfo().PrettyString())
-		if !node.SpakgExists() && !node.IsInstalled(params.DestDir) || node.ForgeOnly {
+		//Not Build Only
+		//Package exists exactly or is exactly installed or
+		//Not first time through and has a goodenough installed
+		if !node.ForgeOnly && (node.SpakgExists() || node.IsInstalled(params.DestDir) || len(*visitedtreelist) != 0 && node.AnyInstalled(params.DestDir)) {
+			debug("Have " + node.PkgInfo().PrettyString())
+		} else {
+			debug("Build " + node.PkgInfo().PrettyString())
+			tobuild.Append(node)
+		}
+		continue
+
+		if !node.SpakgExists() && !node.IsInstalled(params.DestDir) && !node.AnyInstalled(params.DestDir) ||
+			node.ForgeOnly {
 			debug("Build " + node.PkgInfo().PrettyString())
 			tobuild.Append(node)
 		} else {
@@ -178,6 +190,7 @@ func findToBuild(graph, orderedtreelist, visitedtreelist *pkgdep.PkgDepList, par
 	happy := true //If you are happy and you know it clap your hands!!
 	params.IsForge = true
 	for _, node := range tobuild {
+		debug("To Build: " + node.PkgInfo().PrettyString())
 		//We have not already been "built"
 		if !visitedtreelist.Contains(node.Name) {
 			//Create a new graph representing the build deps of node
@@ -193,6 +206,7 @@ func findToBuild(graph, orderedtreelist, visitedtreelist *pkgdep.PkgDepList, par
 			//Add ourselves to existing builds
 			visitedtreelist.Append(newroot)
 
+			debug("Dep check " + node.PkgInfo().PrettyString())
 			if !DepTree(newroot, params) {
 				happy = false
 				continue
@@ -200,6 +214,7 @@ func findToBuild(graph, orderedtreelist, visitedtreelist *pkgdep.PkgDepList, par
 
 			if !findToBuild(&newrootgraph, orderedtreelist, visitedtreelist, params) {
 				happy = false
+				debug("dep failure")
 				continue
 			}
 
@@ -221,9 +236,11 @@ func findToBuild(graph, orderedtreelist, visitedtreelist *pkgdep.PkgDepList, par
 				existing in order signifies that the package is ok to go
 			*/
 			if !orderedtreelist.Contains(node.Name) {
+				debug("Build dep loop")
 				happy = false
 			}
 		}
+		debug("Done " + node.PkgInfo().PrettyString())
 	}
 	return happy
 }
