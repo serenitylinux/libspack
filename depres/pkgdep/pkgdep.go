@@ -115,8 +115,10 @@ func (pd *PkgDep) PkgInfo() *pkginfo.PkgInfo {
 		return nil
 	}
 
-	for _, flag := range *flags {
-		p.SetFlagState(&flag)
+	err := p.SetFlagStates(*flags)
+	if err != nil {
+		log.Error.Println(err)
+		return nil
 	}
 	return p
 }

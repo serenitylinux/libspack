@@ -1,14 +1,16 @@
 package pkginfo
 
 import (
+	"errors"
 	"fmt"
+	"hash/crc32"
+	"io"
+	"time"
+
 	"github.com/cam72cam/go-lumberjack/log"
 	"github.com/serenitylinux/libspack/control"
 	"github.com/serenitylinux/libspack/flag"
 	"github.com/serenitylinux/libspack/helpers/json"
-	"hash/crc32"
-	"io"
-	"time"
 )
 
 type PkgInfo struct {
@@ -84,23 +86,32 @@ func (p *PkgInfo) ParsedFlagStates() flag.FlagList {
 	}
 	return p.parsedFlagStates
 }
-func (p *PkgInfo) SetFlagState(f *flag.Flag) {
+func (p *PkgInfo) SetFlagState(f *flag.Flag) error {
 	p.parsedFlagStates = nil
+
+	if !p.ParsedFlags().Contains(f.Name) {
+		return errors.New("Invalid flag " + f.Name)
+	}
 
 	for i, v := range p.FlagStates {
 		if v[1:] == f.Name { //equals ignore sign
 			p.FlagStates[i] = f.String()
-			return
+			return nil
 		}
 	}
 	//Does not contain f already
 	p.FlagStates = append(p.FlagStates, f.String())
+	return nil
 }
 
-func (p *PkgInfo) SetFlagStates(states []flag.Flag) {
+func (p *PkgInfo) SetFlagStates(states []flag.Flag) error {
 	for _, f := range states {
-		p.SetFlagState(&f)
+		err := p.SetFlagState(&f)
+		if err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
 //Default + Configured
@@ -118,6 +129,7 @@ func (p *PkgInfo) ComputedFlagStates() flag.FlagList {
 			}
 		}
 	}
+
 	return res
 }
 

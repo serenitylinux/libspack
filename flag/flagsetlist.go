@@ -12,6 +12,15 @@ func (fsl FlagSetList) String() string {
 	return res
 }
 
+func (fsl FlagSetList) Contains(name string) bool {
+	for _, fl := range fsl {
+		if fl.Flag.Name == name {
+			return true
+		}
+	}
+	return false
+}
+
 func (fsl *FlagSetList) Verify(list *FlagList) bool {
 	for _, fs := range *fsl {
 		if !fs.Verify(list) {

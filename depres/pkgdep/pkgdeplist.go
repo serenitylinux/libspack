@@ -71,7 +71,16 @@ func (list *PkgDepList) Add(depname string, destdir string) *PkgDep {
 	//Add global flags to new depnode
 	globalconstraint, exists := constraintconfig.GetAll(destdir)[depname]
 	if exists {
-		depnode.Constraints.AppendOther("Global Package Config", globalconstraint)
+		ok := true
+		for _, f := range *globalconstraint.Flags {
+			if !depnode.Control().ParsedFlags().Contains(f.Name) {
+				log.Error.Format("Invalid flag %s, skipping", f.Name)
+				ok = false
+			}
+		}
+		if ok {
+			depnode.Constraints.AppendOther("Global Package Config", globalconstraint)
+		}
 	}
 
 	if !depnode.Exists() {
