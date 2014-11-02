@@ -34,8 +34,7 @@ func (list ConstraintList) addFile(path string) error {
 				interr = errors.New("Cannot have a condition in a constraint config file: " + line)
 				return
 			}
-
-			if d.Version1 == nil && d.Version2 == nil && len(*(d.Flags)) == 0 {
+			if d.Version1 == nil && d.Version2 == nil && (d.Flags == nil || len(*(d.Flags)) == 0) {
 				interr = errors.New("Package " + d.Name + " has no constraints specified")
 				return
 			}
