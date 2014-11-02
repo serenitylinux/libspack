@@ -77,6 +77,10 @@ func DepTree(node *pkgdep.PkgDep, params DepResParams) bool {
 		//We are not part of the graph yet
 		if depnode == nil {
 			depnode = node.Graph.Add(dep.Name, params.DestDir)
+			if depnode == nil {
+				rethappy = false
+				continue
+			}
 			if !depnode.ForgeOnly {
 				depnode.AddRdepConstraints(params.DestDir, strings.Repeat("\t", indent+1))
 			}
