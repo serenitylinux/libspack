@@ -3,15 +3,16 @@ package wield
 import (
 	"errors"
 	"fmt"
-	"github.com/cam72cam/go-lumberjack/log"
-	"github.com/serenitylinux/libspack/spakg"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
+
+	"github.com/cam72cam/go-lumberjack/log"
+	"github.com/serenitylinux/libspack/hash"
+	"github.com/serenitylinux/libspack/spakg"
 )
 import . "github.com/serenitylinux/libspack/misc"
-import . "github.com/serenitylinux/libspack/hash"
 import . "github.com/serenitylinux/libspack"
 
 func Wield(file string, destdir string) error {
@@ -141,7 +142,7 @@ func ExtractCheckCopy(pkgfile string, destdir string) error {
 				return errors.New(fmt.Sprintf("Sum for %s does not exist", path))
 			}
 
-			sum, erri := Md5sum(path)
+			sum, erri := hash.Md5sum(path)
 			if erri != nil {
 				return errors.New(fmt.Sprintf("Cannot compute sum of %s", path))
 			}
@@ -218,6 +219,23 @@ func ExtractCheckCopy(pkgfile string, destdir string) error {
 	})
 	if err != nil {
 		return err
+	}
+
+	if prev, _ := GetPackageInstalledByName(pkg.Control.Name, destdir); prev != nil {
+		log.Debug.Format("Removing files from old version %s", prev.PkgInfo.PrettyString())
+		//TODO remove empty leftover dirs
+		for oldf, _ := range prev.Hashes {
+			_, skip := pkg.Md5sums[oldf]
+			if !skip {
+				log.Debug.Format("Removing %s", oldf)
+				err = os.RemoveAll(oldf)
+				if err != nil {
+					log.Warn.Format("Could not remove %s from old version, %v", oldf, err)
+				}
+			} else {
+				log.Debug.Format("Keeping %s", oldf)
+			}
+		}
 	}
 
 	PrintSuccess()
