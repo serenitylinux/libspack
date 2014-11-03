@@ -227,13 +227,13 @@ func ExtractCheckCopy(pkgfile string, destdir string) error {
 		for oldf, _ := range prev.Hashes {
 			_, skip := pkg.Md5sums[oldf]
 			if !skip {
-				log.Debug.Format("Removing %s", oldf)
-				err = os.RemoveAll(oldf)
+				log.Debug.Format("Removing %s", destdir+oldf)
+				err = os.RemoveAll(destdir + oldf)
 				if err != nil {
-					log.Warn.Format("Could not remove %s from old version, %v", oldf, err)
+					log.Warn.Format("Could not remove %s from old version, %v", destdir+oldf, err)
 				}
 			} else {
-				log.Debug.Format("Keeping %s", oldf)
+				log.Debug.Format("Keeping %s", destdir+oldf)
 			}
 		}
 	}
