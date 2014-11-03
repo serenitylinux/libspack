@@ -174,7 +174,7 @@ func findToBuild(graph, orderedtreelist, visitedtreelist *pkgdep.PkgDepList, par
 		//Not Build Only
 		//Package exists exactly or is exactly installed or
 		//Not first time through and has a goodenough installed
-		if !node.ForgeOnly && (node.SpakgExists() || node.IsInstalled(params.DestDir) || len(*visitedtreelist) != 0 && node.AnyInstalled(params.DestDir)) {
+		if !node.ForgeOnly && (node.SpakgExists() || node.IsInstalled(params.DestDir) || len(*visitedtreelist) != 0 && node.AnyInstalledNoGlobal(params.DestDir)) {
 			debug("Have " + node.PkgInfo().PrettyString())
 		} else {
 			debug("Build " + node.PkgInfo().PrettyString())

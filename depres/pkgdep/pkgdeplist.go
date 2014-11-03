@@ -89,6 +89,18 @@ func (list *PkgDepList) Add(depname string, destdir string) *PkgDep {
 
 	return depnode
 }
+
+func (list *PkgDepList) ToInstallRequiredNoGlobal(destdir string) *PkgDepList {
+	newl := make(PkgDepList, 0)
+
+	for _, pkg := range *list {
+		if !pkg.ForgeOnly && !pkg.AnyInstalledNoGlobal(destdir) {
+			newl.Append(pkg)
+		}
+	}
+
+	return &newl
+}
 func (list *PkgDepList) ToInstallRequired(destdir string) *PkgDepList {
 	newl := make(PkgDepList, 0)
 

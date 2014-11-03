@@ -141,6 +141,10 @@ func (pd *PkgDep) IsInstalled(destdir string) bool {
 	return !pd.IsReinstall && pd.Repo.IsInstalled(pd.PkgInfo(), destdir)
 }
 
+func (pd *PkgDep) AnyInstalledNoGlobal(destdir string) bool {
+	return !pd.IsReinstall && pd.Repo.AnyInstalled(pd.Name, pd.Constraints.PkgsOnly().Deps(), destdir)
+}
+
 func (pd *PkgDep) AnyInstalled(destdir string) bool {
 	return !pd.IsReinstall && pd.Repo.AnyInstalled(pd.Name, pd.Constraints.Deps(), destdir)
 }

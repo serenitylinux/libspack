@@ -41,6 +41,18 @@ func (l *ConstraintList) AppendOther(reason string, deps dep.Dep) {
 	*l = append(*l, Constraint{nil, deps, reason})
 }
 
+//Return a copy of us _without_ global deps and other funky jazz
+func (l *ConstraintList) PkgsOnly() *ConstraintList {
+	newl := make(ConstraintList, 0, len(*l))
+	for _, c := range *l {
+		if c.Parent != nil {
+			newl = append(newl, c)
+		}
+	}
+
+	return &newl
+}
+
 func (l *ConstraintList) Deps() dep.DepList {
 	res := make(dep.DepList, len(*l))
 	for i, c := range *l {
