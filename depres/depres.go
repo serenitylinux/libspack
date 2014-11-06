@@ -35,7 +35,7 @@ func DepTree(node *pkgdep.PkgDep, params DepResParams) bool {
 	//And not a reinstall
 	//And not being built
 	if !params.IsForge && node.IsInstalled(params.DestDir) && !params.IsReinstall {
-		debug("already installed")
+		debug("already installed " + node.PkgInfo().PrettyString())
 		return true
 	}
 	node.IsReinstall = params.IsReinstall
@@ -71,7 +71,7 @@ func DepTree(node *pkgdep.PkgDep, params DepResParams) bool {
 
 	//We are new or have been changed
 	for _, dep := range deps {
-		debug("Require: " + dep.Name)
+		debug("Require: " + dep.String())
 
 		depnode := node.Graph.Find(dep.Name)
 		//We are not part of the graph yet
