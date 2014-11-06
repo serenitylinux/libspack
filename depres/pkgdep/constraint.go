@@ -9,7 +9,7 @@ import (
 )
 
 type Constraint struct {
-	Parent *PkgDep
+	Parent *Node
 	dep    dep.Dep
 	reason string
 }
@@ -24,7 +24,7 @@ func (c *Constraint) String() string {
 
 type ConstraintList []Constraint
 
-func (l *ConstraintList) Contains(p *PkgDep) bool {
+func (l *ConstraintList) Contains(p *Node) bool {
 	for _, n := range *l {
 		if p == n.Parent {
 			return true
@@ -33,7 +33,7 @@ func (l *ConstraintList) Contains(p *PkgDep) bool {
 	return false
 }
 
-func (l *ConstraintList) AppendParent(p *PkgDep, deps dep.Dep) {
+func (l *ConstraintList) AppendParent(p *Node, deps dep.Dep) {
 	*l = append(*l, Constraint{p, deps, "Required by " + p.Name})
 }
 
@@ -61,7 +61,7 @@ func (l *ConstraintList) Deps() dep.DepList {
 	return res
 }
 
-func (l *ConstraintList) ComputedFlags(p *PkgDep) *flag.FlagList {
+func (l *ConstraintList) ComputedFlags(p *Node) *flag.FlagList {
 	defaultf := p.Control().DefaultFlags()
 	newlist := make(flag.FlagList, 0)
 
@@ -118,7 +118,7 @@ func (l *ConstraintList) ComputedVersionChecker() VersionChecker {
 	}
 }
 
-func (l *ConstraintList) RemoveByParent(parent *PkgDep) bool {
+func (l *ConstraintList) RemoveByParent(parent *Node) bool {
 	ret := false
 	newl := make(ConstraintList, 0)
 	for _, constraint := range *l {

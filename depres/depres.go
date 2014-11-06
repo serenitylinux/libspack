@@ -13,16 +13,13 @@ import (
 )
 
 type DepResParams struct {
-	IsForge     bool
-	IsReinstall bool
 	IgnoreBDeps bool
-	DestDir     string
 }
 
 //TODO log.Error.Println(all the things)
 var indent int = 0
 
-func DepTree(node *pkgdep.PkgDep, params DepResParams) bool {
+func DepTree(node *pkgdep.Node, params DepResParams) bool {
 	indent++
 	defer func() { indent-- }()
 
@@ -34,11 +31,10 @@ func DepTree(node *pkgdep.PkgDep, params DepResParams) bool {
 	//We are already installed exact (checks version and flags as well)
 	//And not a reinstall
 	//And not being built
-	if !params.IsForge && node.IsInstalled(params.DestDir) && !params.IsReinstall {
+	if !node.ForgeOnly && node.IsInstalled() {
 		debug("already installed " + node.PkgInfo().PrettyString())
 		return true
 	}
-	node.IsReinstall = params.IsReinstall
 
 	//We do not need to be rechecked
 	if !node.Dirty {
@@ -47,7 +43,7 @@ func DepTree(node *pkgdep.PkgDep, params DepResParams) bool {
 	}
 
 	//We are being built and do not care about bdeps, I think we are done here
-	if params.IsForge && params.IgnoreBDeps {
+	if node.ForgeOnly && params.IgnoreBDeps {
 		debug("Ignore bdeps")
 		return true
 	}
@@ -56,7 +52,7 @@ func DepTree(node *pkgdep.PkgDep, params DepResParams) bool {
 	rethappy := true   //Clap your hands!
 
 	var alldeps dep.DepList
-	if params.IsForge {
+	if node.ForgeOnly {
 		alldeps = node.Control().ParsedBDeps()
 	} else {
 		alldeps = node.Control().ParsedDeps()
@@ -65,10 +61,6 @@ func DepTree(node *pkgdep.PkgDep, params DepResParams) bool {
 	setflags := node.ComputedFlags()
 	deps := alldeps.EnabledFromFlags(*setflags)
 
-	//	isbdep := params.IsForge //Make a copy of isForge for later
-	params.IsForge = false
-	params.IsReinstall = false
-
 	//We are new or have been changed
 	for _, dep := range deps {
 		debug("Require: " + dep.String())
@@ -76,13 +68,13 @@ func DepTree(node *pkgdep.PkgDep, params DepResParams) bool {
 		depnode := node.Graph.Find(dep.Name)
 		//We are not part of the graph yet
 		if depnode == nil {
-			depnode = node.Graph.Add(dep.Name, params.DestDir)
+			depnode = node.Graph.Add(dep.Name, false)
 			if depnode == nil {
 				rethappy = false
 				continue
 			}
 			if !depnode.ForgeOnly {
-				depnode.AddRdepConstraints(params.DestDir, strings.Repeat("\t", indent+1))
+				depnode.AddRdepConstraints(strings.Repeat("\t", indent+1))
 			}
 		}
 
@@ -146,19 +138,19 @@ func DepTree(node *pkgdep.PkgDep, params DepResParams) bool {
 	return rethappy
 }
 
-func FindToBuild(graph *pkgdep.PkgDepList, params DepResParams) (*pkgdep.PkgDepList, bool) {
+func FindToBuild(graph *pkgdep.Graph, params DepResParams, destdir string) (*pkgdep.Graph, bool) {
 	log.Debug.Println("Finding packages to build:")
 
-	orderedlist := make(pkgdep.PkgDepList, 0)
-	visitedlist := make(pkgdep.PkgDepList, 0)
+	orderedlist := pkgdep.NewGraph(destdir)
+	visitedlist := pkgdep.NewGraph(destdir)
 
-	happy := findToBuild(graph, &orderedlist, &visitedlist, params)
+	happy := findToBuild(graph, orderedlist, visitedlist, params, destdir)
 	visitedlist.Reverse() //See diagram below
 
-	return &visitedlist, happy
+	return visitedlist, happy
 }
 
-func findToBuild(graph, orderedtreelist, visitedtreelist *pkgdep.PkgDepList, params DepResParams) bool {
+func findToBuild(graph, orderedtreelist, visitedtreelist *pkgdep.Graph, params DepResParams, destdir string) bool {
 	indent++
 	defer func() { indent-- }()
 
@@ -167,14 +159,14 @@ func findToBuild(graph, orderedtreelist, visitedtreelist *pkgdep.PkgDepList, par
 	}
 
 	//list of packages to build
-	tobuild := make(pkgdep.PkgDepList, 0)
+	tobuild := pkgdep.NewGraph(graph.DestDir)
 
 	//Find packages we have yet to build
-	for _, node := range *graph {
-		//Not Build Only
-		//Package exists exactly or is exactly installed or
-		//Not first time through and has a goodenough installed
-		if !node.ForgeOnly && (node.SpakgExists() || node.IsInstalled(params.DestDir) || len(*visitedtreelist) != 0 && node.AnyInstalledNoGlobal(params.DestDir)) {
+	for _, node := range graph.Nodes {
+		if visitedtreelist.Size() != 0 { //If we are passed the first layer, we don't care if the pacakge is latest
+			node.IsLatest = false
+		}
+		if !node.ForgeOnly && (node.SpakgExists() || node.IsInstalled()) {
 			debug("Have " + node.PkgInfo().PrettyString())
 		} else {
 			debug("Build " + node.PkgInfo().PrettyString())
@@ -182,8 +174,7 @@ func findToBuild(graph, orderedtreelist, visitedtreelist *pkgdep.PkgDepList, par
 		}
 		continue
 
-		if !node.SpakgExists() && !node.IsInstalled(params.DestDir) && !node.AnyInstalled(params.DestDir) ||
-			node.ForgeOnly {
+		if !node.SpakgExists() && !node.IsInstalled() || node.ForgeOnly {
 			debug("Build " + node.PkgInfo().PrettyString())
 			tobuild.Append(node)
 		} else {
@@ -192,8 +183,7 @@ func findToBuild(graph, orderedtreelist, visitedtreelist *pkgdep.PkgDepList, par
 	}
 
 	happy := true //If you are happy and you know it clap your hands!!
-	params.IsForge = true
-	for _, node := range tobuild {
+	for _, node := range tobuild.Nodes {
 		debug("To Build: " + node.PkgInfo().PrettyString())
 		//We have not already been "built"
 		if !visitedtreelist.Contains(node.Name) {
@@ -201,8 +191,7 @@ func findToBuild(graph, orderedtreelist, visitedtreelist *pkgdep.PkgDepList, par
 			newroot := pkgdep.New(node.Name, node.Repo)
 			newroot.Constraints = node.Constraints //This *should* be a deep copy
 
-			newrootgraph := make(pkgdep.PkgDepList, 0)
-			newroot.Graph = &newrootgraph
+			newroot.Graph = pkgdep.NewGraph(graph.DestDir)
 
 			//mark newroot read only
 			newroot.ForgeOnly = true
@@ -216,9 +205,11 @@ func findToBuild(graph, orderedtreelist, visitedtreelist *pkgdep.PkgDepList, par
 				continue
 			}
 
-			if !findToBuild(&newrootgraph, orderedtreelist, visitedtreelist, params) {
+			debug("Find check " + node.PkgInfo().PrettyString())
+			if !findToBuild(newroot.Graph, orderedtreelist, visitedtreelist, params, destdir) {
 				happy = false
-				debug("dep failure")
+				log.Error.Println("From " + node.PkgInfo().PrettyString())
+				break
 				continue
 			}
 
@@ -240,7 +231,7 @@ func findToBuild(graph, orderedtreelist, visitedtreelist *pkgdep.PkgDepList, par
 				existing in order signifies that the package is ok to go
 			*/
 			if !orderedtreelist.Contains(node.Name) {
-				debug("Build dep loop")
+				log.Error.Println("Build dep loop: " + node.PkgInfo().PrettyString())
 				happy = false
 			}
 		}

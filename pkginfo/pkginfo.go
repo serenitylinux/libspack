@@ -133,6 +133,10 @@ func (p *PkgInfo) ComputedFlagStates() flag.FlagList {
 	return res
 }
 
+func (p *PkgInfo) Satisfies(flags flag.FlagList) bool {
+	return flags.IsSubSet(p.ComputedFlagStates())
+}
+
 func FromFile(filename string) (*PkgInfo, error) {
 	var i PkgInfo
 	err := json.DecodeFile(filename, &i)

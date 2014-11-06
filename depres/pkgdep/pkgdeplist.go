@@ -2,20 +2,23 @@ package pkgdep
 
 import (
 	"fmt"
+
 	"github.com/cam72cam/go-lumberjack/log"
 	"github.com/serenitylinux/libspack"
-	"github.com/serenitylinux/libspack/constraintconfig"
 	"github.com/serenitylinux/libspack/misc"
 )
 
-type PkgDepList []*PkgDep
-
-func (list *PkgDepList) ContainsPkg(pd *PkgDep) bool {
-	return list.Contains(pd.Name)
+type Graph struct {
+	DestDir string
+	Nodes   []*Node
 }
 
-func (list *PkgDepList) Contains(name string) bool {
-	for _, item := range *list {
+func NewGraph(destdir string, nodes ...*Node) *Graph {
+	return &Graph{DestDir: destdir, Nodes: nodes}
+}
+
+func (g *Graph) Contains(name string) bool {
+	for _, item := range g.Nodes {
 		if item.Name == name {
 			return true
 		}
@@ -23,20 +26,24 @@ func (list *PkgDepList) Contains(name string) bool {
 	return false
 }
 
-func (list *PkgDepList) Append(e *PkgDep) {
-	*list = append(*list, e)
+func (g *Graph) Append(e *Node) {
+	g.Nodes = append(g.Nodes, e)
 }
 
 //http://blog.golang.org/slices Magics!
-func (list *PkgDepList) Prepend(e *PkgDep) {
-	*list = (*list)[0 : len(*list)+1] //Increase size by 1
-	copy((*list)[1:], (*list)[0:])    //shift array up by 1
-	(*list)[0] = e                    //set new first element
+func (g *Graph) Prepend(e *Node) {
+	g.Nodes = g.Nodes[0 : len(g.Nodes)+1] //Increase size by 1
+	copy(g.Nodes[1:], g.Nodes[0:])        //shift array up by 1
+	g.Nodes[0] = e                        //set new first element
 }
 
-func (list *PkgDepList) Print() {
+func (g *Graph) Size() int {
+	return len(g.Nodes)
+}
+
+func (g *Graph) Print() {
 	i := 0
-	for _, item := range *list {
+	for _, item := range g.Nodes {
 		str := item.String() + " "
 		i += len(str)
 		if i > misc.GetWidth()-10 {
@@ -49,90 +56,54 @@ func (list *PkgDepList) Print() {
 }
 
 //http://stackoverflow.com/a/19239850
-func (list *PkgDepList) Reverse() {
-	for i, j := 0, len(*list)-1; i < j; i, j = i+1, j-1 {
-		(*list)[i], (*list)[j] = (*list)[j], (*list)[i]
+func (g *Graph) Reverse() {
+	for i, j := 0, len(g.Nodes)-1; i < j; i, j = i+1, j-1 {
+		g.Nodes[i], g.Nodes[j] = g.Nodes[j], g.Nodes[i]
 	}
 }
 
-func (list *PkgDepList) Add(depname string, destdir string) *PkgDep {
+func (g *Graph) Add(name string, latest bool) *Node {
 	//Create new pkgdep node
-	_, repo := libspack.GetPackageLatest(depname)
+	_, repo := libspack.GetPackageLatest(name)
 	if repo == nil {
-		log.Error.Println("Unable to find repo for ", depname)
+		log.Error.Println("Unable to find repo for ", name)
 		return nil
 	}
 
-	depnode := New(depname, repo)
-	list.Append(depnode)
+	node := New(name, repo)
+	node.Graph = g
+	g.Append(node)
 
-	depnode.Graph = list
+	node.AddGlobalConstraints()
 
-	//Add global flags to new depnode
-	globalconstraint, exists := constraintconfig.GetAll(destdir)[depname]
-	if exists {
-		ok := true
-		for _, f := range *globalconstraint.Flags {
-			if !depnode.Control().ParsedFlags().Contains(f.Name) {
-				log.Error.Format("Invalid flag %s, skipping", f.Name)
-				ok = false
-			}
-		}
-		if ok {
-			depnode.Constraints.AppendOther("Global Package Config", globalconstraint)
-		}
+	if !node.Exists() {
+		log.Error.Println(name, " unable to satisfy parents") //TODO more info
 	}
 
-	if !depnode.Exists() {
-		log.Error.Println(depname, " unable to satisfy parents") //TODO more info
-	}
-
-	return depnode
+	return node
 }
 
-func (list *PkgDepList) ToInstallRequiredNoGlobal(destdir string) *PkgDepList {
-	newl := make(PkgDepList, 0)
+func (g *Graph) ToInstall() *Graph {
+	nodes := make([]*Node, 0)
 
-	for _, pkg := range *list {
-		if !pkg.ForgeOnly && !pkg.AnyInstalledNoGlobal(destdir) {
-			newl.Append(pkg)
+	for _, pkg := range g.Nodes {
+		if !pkg.ForgeOnly && !pkg.IsInstalled() {
+			nodes = append(nodes, pkg)
 		}
 	}
 
-	return &newl
+	return NewGraph(g.DestDir, nodes...)
 }
-func (list *PkgDepList) ToInstallRequired(destdir string) *PkgDepList {
-	newl := make(PkgDepList, 0)
-
-	for _, pkg := range *list {
-		if !pkg.ForgeOnly && !pkg.AnyInstalled(destdir) {
-			newl.Append(pkg)
-		}
-	}
-
-	return &newl
-}
-func (list *PkgDepList) ToInstallLatest(destdir string) *PkgDepList {
-	newl := make(PkgDepList, 0)
-
-	for _, pkg := range *list {
-		if !pkg.ForgeOnly && !pkg.IsInstalled(destdir) {
-			newl.Append(pkg)
-		}
-	}
-
-	return &newl
-}
-func (list *PkgDepList) CheckPackageFlags() bool {
-	for _, pkg := range *list {
+func (g *Graph) CheckPackageFlags() bool {
+	for _, pkg := range g.Nodes {
 		if !pkg.ValidFlags() {
 			return false
 		}
 	}
 	return true
 }
-func (list *PkgDepList) Find(name string) *PkgDep {
-	for _, pkg := range *list {
+func (g *Graph) Find(name string) *Node {
+	for _, pkg := range g.Nodes {
 		if pkg.Name == name {
 			return pkg
 		}
