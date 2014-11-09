@@ -195,6 +195,7 @@ func findToBuild(graph, orderedtreelist, visitedtreelist *pkgdep.Graph, params D
 
 			//mark newroot read only
 			newroot.ForgeOnly = true
+			newroot.IsLatest = node.IsLatest
 
 			//Add ourselves to existing builds
 			visitedtreelist.Append(newroot)
