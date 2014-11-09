@@ -195,16 +195,27 @@ func ExtractCheckCopy(pkgfile string, destdir string) error {
 				}
 			}
 		} else {
+			var currhash string
+			var e error
 			if PathExists(destPath) {
-				e := os.Remove(destPath)
+				currhash, e = hash.Md5sum(destPath)
 				if e != nil {
 					return e
 				}
 			}
-
-			e := CopyFile(fsPath, destPath)
-			if e != nil {
-				return e
+			if currhash != pkg.Md5sums[path] {
+				if PathExists(destPath) {
+					e = os.Remove(destPath)
+					if e != nil {
+						return e
+					}
+				}
+				e = CopyFile(fsPath, destPath)
+				if e != nil {
+					return e
+				}
+			} else {
+				log.Debug.Format("Skipping unchanged %s", path)
 			}
 		}
 
@@ -237,6 +248,8 @@ func ExtractCheckCopy(pkgfile string, destdir string) error {
 			}
 		}
 	}
+
+	Ldconfig(destdir)
 
 	PrintSuccess()
 	return nil
