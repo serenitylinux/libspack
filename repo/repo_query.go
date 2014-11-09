@@ -5,7 +5,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/cam72cam/go-lumberjack/log"
 	"github.com/serenitylinux/libspack/control"
 	"github.com/serenitylinux/libspack/dep"
 	"github.com/serenitylinux/libspack/pkginfo"
@@ -105,8 +104,12 @@ func (repo *Repo) HasTemplate(c *control.Control) bool {
 
 func (repo *Repo) AnyInstalled(pkg string, deps dep.DepList, destdir string) bool {
 	candidates := make([]PkgInstallSet, 0)
+	list, err := repo.pkgsInstalledInRoot(destdir)
+	if err != nil {
+		return false
+	}
 
-	for _, set := range *repo.installed {
+	for _, set := range *list {
 		if set.Control.Name == pkg {
 			candidates = append(candidates, set)
 		}
@@ -132,24 +135,41 @@ func (repo *Repo) AnyInstalled(pkg string, deps dep.DepList, destdir string) boo
 	return len(candidates) != 0
 }
 
-func (repo *Repo) IsInstalled(p *pkginfo.PkgInfo, basedir string) bool {
-	if filepath.Clean(basedir) == "/" {
-		_, exists := (*repo.installed)[p.UUID()]
-		return exists
+var cachedInstalledRoots = make(map[string]*PkgInstallSetMap)
+
+func (repo *Repo) pkgsInstalledInRoot(destdir string) (*PkgInstallSetMap, error) {
+	if filepath.Clean(destdir) == "/" {
+		return repo.installed, nil
 	} else {
-		//We should really load the pkginstallsetfiles in the basedir and iterate through like if basedir = /
-		return PathExists(repo.installSetFile(*p, basedir))
+		if list, ok := cachedInstalledRoots[destdir]; ok {
+			return list, nil
+		}
+		list, err := installedPackageList(destdir)
+		if err != nil {
+			return nil, err
+		}
+		cachedInstalledRoots[destdir] = list
+		return list, nil
 	}
 }
-func (repo *Repo) IsAnyInstalled(c *control.Control, basedir string) bool {
-	if filepath.Clean(basedir) == "/" {
-		for _, pkg := range *repo.installed {
-			if pkg.Control.UUID() == c.UUID() {
-				return true
-			}
+
+func (repo *Repo) IsInstalled(p *pkginfo.PkgInfo, destdir string) bool {
+	list, err := repo.pkgsInstalledInRoot(destdir)
+	if err != nil {
+		return false
+	}
+	_, exists := (*list)[p.UUID()]
+	return exists
+}
+func (repo *Repo) IsAnyInstalled(c *control.Control, destdir string) bool {
+	list, err := repo.pkgsInstalledInRoot(destdir)
+	if err != nil {
+		return false
+	}
+	for _, pkg := range *list {
+		if pkg.Control.UUID() == c.UUID() {
+			return true
 		}
-	} else {
-		panic("Looking at installed packages in a root should be implemented at some point")
 	}
 	return false
 }
@@ -162,21 +182,11 @@ func (repo *Repo) GetAllInstalled() []PkgInstallSet {
 	return res
 }
 
-func (repo *Repo) GetInstalledByName(name string, basedir string) *PkgInstallSet {
-	var list *PkgInstallSetMap
-
-	if filepath.Clean(basedir) == "/" {
-		list = repo.installed
-
-	} else {
-		var err error
-		list, err = installedPackageList(basedir + repo.installedPkgsDir())
-		if err != nil {
-			//log.Warn.Format("Unable to load packages: %s", err)
-			return nil
-		}
+func (repo *Repo) GetInstalledByName(name string, destdir string) *PkgInstallSet {
+	list, err := repo.pkgsInstalledInRoot(destdir)
+	if err != nil {
+		return nil
 	}
-
 	for _, set := range *list {
 		if set.PkgInfo.Name == name {
 			return &set
@@ -185,22 +195,14 @@ func (repo *Repo) GetInstalledByName(name string, basedir string) *PkgInstallSet
 	return nil
 }
 
-func (repo *Repo) GetInstalled(p *pkginfo.PkgInfo, basedir string) *PkgInstallSet {
-	if filepath.Clean(basedir) == "/" {
-		for _, set := range *repo.installed {
-			if set.PkgInfo.UUID() == p.UUID() {
-				return &set
-			}
-		}
-	} else {
-		//TODO basedir better
-		file := repo.installSetFile(*p, basedir)
-		s, err := PkgISFromFile(file)
-		if err != nil {
-			log.Warn.Format("Unable to load %s: %s", file, err)
-			return nil
-		} else {
-			return s
+func (repo *Repo) GetInstalled(p *pkginfo.PkgInfo, destdir string) *PkgInstallSet {
+	list, err := repo.pkgsInstalledInRoot(destdir)
+	if err != nil {
+		return nil
+	}
+	for _, set := range *list {
+		if set.PkgInfo.UUID() == p.UUID() {
+			return &set
 		}
 	}
 	return nil
