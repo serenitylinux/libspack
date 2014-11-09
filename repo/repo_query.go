@@ -144,7 +144,7 @@ func (repo *Repo) pkgsInstalledInRoot(destdir string) (*PkgInstallSetMap, error)
 		if list, ok := cachedInstalledRoots[destdir]; ok {
 			return list, nil
 		}
-		list, err := installedPackageList(destdir)
+		list, err := installedPackageList(destdir + InstallDir + repo.Name + "/")
 		if err != nil {
 			return nil, err
 		}
