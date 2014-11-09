@@ -120,7 +120,7 @@ func ExtractCheckCopy(pkgfile string, destdir string) error {
 		return err
 	}
 
-	HeaderFormat("Unpacking %s", pkg.Control.Name)
+	HeaderFormat("Unpacking  %s", pkg.Control.Name)
 	cmd := exec.Command("tar", "-xvpf", tmpDir+"/fs.tar", "-C", fsDir)
 	err = RunCommand(cmd, log.Debug, os.Stderr)
 	if err != nil {
@@ -129,7 +129,7 @@ func ExtractCheckCopy(pkgfile string, destdir string) error {
 
 	PrintSuccess()
 
-	HeaderFormat("Checking %s", pkg.Control.Name)
+	HeaderFormat("Checking   %s", pkg.Control.Name)
 
 	walk := func(path string, f os.FileInfo, e error) error {
 		if e != nil {

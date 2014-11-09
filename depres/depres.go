@@ -32,7 +32,7 @@ func DepTree(node *pkgdep.Node, params DepResParams) bool {
 	//And not a reinstall
 	//And not being built
 	if !node.ForgeOnly && node.IsInstalled() {
-		debug("already installed " + node.PkgInfo().PrettyString())
+		debug("already installed " + node.PkgInfo().PrettyString() + " in " + node.Graph.DestDir)
 		return true
 	}
 

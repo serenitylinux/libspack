@@ -2,10 +2,11 @@ package pkgdep
 
 import (
 	"fmt"
+	"os"
+	"text/tabwriter"
 
 	"github.com/cam72cam/go-lumberjack/log"
 	"github.com/serenitylinux/libspack"
-	"github.com/serenitylinux/libspack/misc"
 )
 
 type Graph struct {
@@ -15,6 +16,26 @@ type Graph struct {
 
 func NewGraph(destdir string, nodes ...*Node) *Graph {
 	return &Graph{DestDir: destdir, Nodes: nodes}
+}
+
+func (g *Graph) AlphaOrdered() []*Node {
+	res := make([]*Node, 0, g.Size())
+	for _, item := range g.Nodes {
+		set := false
+		for i, curr := range res {
+			if curr.Name > item.Name {
+				res = res[0 : len(res)+1] //Increase size by 1
+				copy(res[1+i:], res[i:])  //shift array up by X
+				res[i] = item             //set new first element
+				set = true
+				break
+			}
+		}
+		if !set {
+			res = append(res, item)
+		}
+	}
+	return res
 }
 
 func (g *Graph) Contains(name string) bool {
@@ -42,16 +63,17 @@ func (g *Graph) Size() int {
 }
 
 func (g *Graph) Print() {
-	i := 0
-	for _, item := range g.Nodes {
-		str := item.String() + " "
-		i += len(str)
-		if i > misc.GetWidth()-10 {
-			fmt.Println()
-			i = len(str)
+	w := new(tabwriter.Writer)
+	w.Init(os.Stdout, 0, 8, 1, '\t', 0)
+	for _, item := range g.AlphaOrdered() {
+		var flagstr string
+		flags := item.ComputedFlags()
+		if len(*flags) > 0 {
+			flagstr = fmt.Sprintf("(%s)", flags.String())
 		}
-		fmt.Print(str)
+		fmt.Fprintf(w, "\t%s\t%s\t%s\n", item.Repo.Name, item.Control().UUID(), flagstr)
 	}
+	w.Flush()
 	fmt.Println()
 }
 
