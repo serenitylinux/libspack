@@ -166,6 +166,11 @@ func findToBuild(graph, orderedtreelist, visitedtreelist *pkgdep.Graph, params D
 		if visitedtreelist.Size() != 0 { //If we are passed the first layer, we don't care if the pacakge is latest
 			node.IsLatest = false
 		}
+		if node.PkgInfo() == nil { //TODO better check
+			log.Error.Format("Bad package %s", node.String())
+			return false
+		}
+
 		if !node.ForgeOnly && (node.SpakgExists() || node.IsInstalled()) {
 			debug("Have " + node.PkgInfo().PrettyString())
 		} else {
