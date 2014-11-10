@@ -152,6 +152,13 @@ func (node *Node) PkgInfo() *pkginfo.PkgInfo {
 	p := pkginfo.FromControl(node.Control())
 	err := p.SetFlagStates(*flags)
 	if err != nil {
+		pnew := pkginfo.FromControl(node.Repo.GetPackageByVersionChecker(node.Name, checker))
+		if pnew != nil {
+			if nerr := pnew.SetFlagStates(*flags); nerr == nil { //TODO try more valid combos that just latest
+				node.IsLatest = true
+				return pnew
+			}
+		}
 		log.Error.Println(err)
 		return nil
 	}
@@ -169,7 +176,7 @@ func (node *Node) ValidFlags() bool {
 }
 
 func (node *Node) SpakgExists() bool {
-	return node.Repo.HasSpakg(node.PkgInfo())
+	return node.PkgInfo() != nil && node.Repo.HasSpakg(node.PkgInfo())
 }
 
 func (node *Node) IsInstalled() bool {
