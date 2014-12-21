@@ -42,12 +42,16 @@ func LoadRepos() error {
 	return nil
 }
 
-func RefreshRepos() {
+func RefreshRepos(notRemote bool) {
 	log.Info.Println()
 	for _, repo := range repos {
 		log.Info.Println("Refreshing ", repo.Name)
 		misc.LogBar(log.Info, color.Brown)
-		repo.RefreshRemote()
+		if notRemote {
+			repo.UpdateCaches()
+		} else {
+			repo.RefreshRemote()
+		}
 		PrintSuccess()
 	}
 }
