@@ -1,11 +1,12 @@
 package pkgdep
 
 import (
+	"strings"
+
 	"github.com/cam72cam/go-lumberjack/color"
 	"github.com/cam72cam/go-lumberjack/log"
 	"github.com/serenitylinux/libspack/dep"
 	"github.com/serenitylinux/libspack/flag"
-	"strings"
 )
 
 type Constraint struct {

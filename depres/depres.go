@@ -6,10 +6,11 @@ package depres
 //TODO check valid set of flags on a per package basis
 
 import (
+	"strings"
+
 	"github.com/cam72cam/go-lumberjack/log"
 	"github.com/serenitylinux/libspack/dep"
 	"github.com/serenitylinux/libspack/depres/pkgdep"
-	"strings"
 )
 
 type DepResParams struct {
@@ -24,7 +25,7 @@ func DepTree(node *pkgdep.Node, params DepResParams) bool {
 	defer func() { indent-- }()
 
 	debug := func(s string) {
-		log.Debug.Format("%s%s %s", strings.Repeat("\t", indent), node.Control().UUID(), s)
+		log.Debug.Format("%s%s(%s) %s", strings.Repeat("\t", indent), node.Control().UUID(), node.ComputedFlags().String(), s)
 	}
 	debug("check")
 
