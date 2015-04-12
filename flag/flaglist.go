@@ -1,63 +1,87 @@
 package flag
 
-import ()
+import (
+	"fmt"
+	"strings"
+)
 
-//TODO map[string]Flag
-type FlagList []Flag
+type FlagList map[string]Flag
+type FlatFlagList map[string]FlatFlag
 
 func (l FlagList) String() string {
-	str := ""
-	for i, flag := range l {
-		str += flag.ColorString()
-		if i != len(l)-1 {
-			str += " "
-		}
+	res := make([]string, 0)
+	for _, flag := range l {
+		res = append(res, flag.String())
 	}
-	return str
+	return strings.Join(res, " ")
 }
-func (l *FlagList) IsSubSet(ol FlagList) bool {
-	for _, flag := range *l {
-		found := false
-		for _, oflag := range ol {
-			if oflag.Name == flag.Name {
-				found = oflag.Enabled == flag.Enabled
+
+func (l FlatFlagList) String() string {
+	res := make([]string, 0)
+	for _, flag := range l {
+		res = append(res, flag.String())
+	}
+	return strings.Join(res, " ")
+}
+
+func (l FlagList) ColorString() string {
+	res := make([]string, 0)
+	for _, flag := range l {
+		res = append(res, flag.ColorString())
+	}
+	return strings.Join(res, " ")
+}
+
+func (l FlatFlagList) ColorString() string {
+	res := make([]string, 0)
+	for _, flag := range l {
+		res = append(res, flag.ColorString())
+	}
+	return strings.Join(res, " ")
+}
+
+func (l FlatFlagList) IsSubSetOf(ol FlatFlagList) bool {
+	for _, flag := range l {
+		if oflag, found := ol[flag.Name]; found {
+			if oflag.Enabled != flag.Enabled {
+				return false
 			}
-		}
-		if !found {
+		} else {
 			return false
 		}
 	}
 	return true
 }
 
-func (l *FlagList) Contains(f string) (*Flag, bool) {
-	for _, flag := range *l {
-		if flag.Name == f {
-			return &flag, true
-		}
-	}
-	return nil, false
-}
-
-func (l *FlagList) IsEnabled(f string) bool {
-	for _, flag := range *l {
-		if flag.Name == f {
-			return flag.Enabled
-		}
+func (l FlatFlagList) IsEnabled(f string) bool {
+	if flag, ok := l[f]; ok {
+		return flag.Enabled
 	}
 	return false
 }
 
-func (l *FlagList) Append(f Flag) {
-	*l = append(*l, f)
-}
-
 func (l *FlagList) Clone() *FlagList {
-	newl := make(FlagList, len(*l))
+	newl := make(FlagList)
 
 	for i, flag := range *l {
-		newl[i] = Flag{flag.Name, flag.Enabled}
+		newl[i] = Flag{flag.Name, flag.State}
 	}
 
 	return &newl
+}
+
+func (l FlagList) WithDefaults(defaults FlatFlagList) (FlatFlagList, error) {
+	newl := make(FlatFlagList)
+	for _, flag := range l {
+		if flag.IsFlat() {
+			newl[flag.Name] = flag.Flat()
+		} else {
+			if def, ok := defaults[flag.Name]; ok {
+				newl[flag.Name] = flag.ToFlat(def.Enabled)
+			} else {
+				return nil, fmt.Errorf("Default for flag %s not found", flag.Name)
+			}
+		}
+	}
+	return newl, nil
 }

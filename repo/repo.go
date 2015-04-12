@@ -47,7 +47,7 @@ import (
 )
 
 //Sorted by pkgversion
-type ControlMap map[string]control.ControlList
+type ControlMap map[string][]control.Control
 
 // Map<name, map<version>>
 type TemplateFileMap map[string]map[string]string
@@ -78,7 +78,7 @@ type Repo struct {
 Serialization
 */
 func (repo *Repo) ToFile(filename string) error {
-	return json.EncodeFile(filename, true, repo)
+	return json.EncodeFile(filename, repo)
 }
 
 func FromFile(filename string) (*Repo, error) {

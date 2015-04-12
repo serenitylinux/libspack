@@ -1,26 +1,38 @@
-package flag
+package expr
 
 import (
 	"errors"
-	"github.com/serenitylinux/libspack/parser"
 	"strings"
+
+	"github.com/serenitylinux/libspack/flag"
+	"github.com/serenitylinux/libspack/parser"
 )
 
+// Represents a flag state and a possible expression dependency
+// +flag(-foo && +bar)
 type FlagSet struct {
-	Flag Flag
+	Flag flag.FlatFlag
 	list *exprlist
 }
 
-func FromString(s string) (fs FlagSet, err error) {
+func (fs *FlagSet) UnmarshalJSON(data []byte) (err error) {
+	*fs, err = fromString(string(data))
+	return err
+}
+
+func (fs *FlagSet) MarshalJSON() ([]byte, error) {
+	return []byte(fs.String()), nil
+}
+
+func fromString(s string) (fs FlagSet, err error) {
 	s = strings.Replace(s, " ", "", -1)
 	in := parser.NewInput(s)
 
-	var f *Flag
-	f, err = Parse(&in)
+	f, err := flag.ParseFlat(&in)
 	if err != nil {
-		return
+		return fs, err
 	}
-	fs.Flag = *f
+	fs.Flag = f
 
 	if exists := in.HasNext(1); !exists {
 		//No conditions for flag
@@ -28,8 +40,7 @@ func FromString(s string) (fs FlagSet, err error) {
 	}
 
 	if s, _ := in.Next(1); s != "(" {
-		err = errors.New("Missing '(' after flag")
-		return
+		return fs, errors.New("Missing '(' after flag")
 	}
 
 	var l *exprlist
@@ -51,7 +62,7 @@ func FromString(s string) (fs FlagSet, err error) {
 	return
 }
 
-func (f FlagSet) Verify(list *FlagList) bool {
+func (f FlagSet) Verify(list flag.FlatFlagList) bool {
 	if list.IsEnabled(f.Flag.Name) {
 		return f.list.verify(list)
 	}

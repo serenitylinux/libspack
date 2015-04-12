@@ -60,7 +60,7 @@ func GetAllRepos() RepoList {
 	return repos
 }
 
-func GetPackageAllVersions(pkgname string) (control.ControlList, *repo.Repo) {
+func GetPackageAllVersions(pkgname string) ([]control.Control, *repo.Repo) {
 	for _, repo := range repos {
 		cl, exists := repo.GetControls(pkgname)
 		if exists {

@@ -4,23 +4,21 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
 )
-import . "github.com/serenitylinux/libspack/misc"
 
 func DecodeReader(reader io.Reader, item interface{}) error {
 	dec := json.NewDecoder(reader)
 	return dec.Decode(item)
 }
 
-func DecodeFile(filename string, item interface{}) (err error) {
-	readerFunc := func(r io.Reader) { err = DecodeReader(r, item) }
-
-	ioerr := WithFileReader(filename, readerFunc)
-	if ioerr != nil {
-		return ioerr
+func DecodeFile(file string, item interface{}) error {
+	reader, err := os.Open(file)
+	if err != nil {
+		return err
 	}
-
-	return
+	defer reader.Close()
+	return DecodeReader(reader, item)
 }
 
 func EncodeWriter(writer io.Writer, item interface{}) error {
@@ -28,15 +26,14 @@ func EncodeWriter(writer io.Writer, item interface{}) error {
 	return enc.Encode(item)
 }
 
-func EncodeFile(filename string, create bool, item interface{}) (err error) {
-	writerFunc := func(w io.Writer) { err = EncodeWriter(w, item) }
-
-	ioerr := WithFileWriter(filename, create, writerFunc)
-	if ioerr != nil {
-		return ioerr
+func EncodeFile(file string, item interface{}) error {
+	writer, err := os.Create(file)
+	if err != nil {
+		return err
 	}
+	defer writer.Close()
 
-	return
+	return EncodeWriter(writer, item)
 }
 
 func Stringify(o interface{}) string {

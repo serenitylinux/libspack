@@ -3,7 +3,7 @@ package dep
 /*
 
 [condition] name      versionspec        (depends)
-[+-flag]  pkgname<>=version<>=version(+flag -flag)
+[+-flag]  pkgname<>=version<>=version(+flag -flag ?flag ~flag)
 
 FlagSpec:
 +name
@@ -21,16 +21,21 @@ Version:
 ==version (singular)
 
 FlagSet:
-(FlagSpec,FlagSpec, ...)
+(FlagStat,FlagStat, ...)
++name
+-name
+?name
+~name
 
 */
 
 import (
 	"errors"
 	"fmt"
+	"strings"
+
 	"github.com/serenitylinux/libspack/flag"
 	"github.com/serenitylinux/libspack/parser"
-	"strings"
 )
 
 type Dep struct {
@@ -39,6 +44,15 @@ type Dep struct {
 	Version1  *Version
 	Version2  *Version
 	Flags     *flag.FlagList
+}
+
+func (d *Dep) UnmarshalJSON(data []byte) (err error) {
+	*d, err = Parse(string(data))
+	return err
+}
+
+func (d *Dep) MarshalJSON() ([]byte, error) {
+	return []byte(d.String()), nil
 }
 
 func (d *Dep) String() string {
@@ -116,7 +130,7 @@ func (d *Dep) parse(in *parser.Input) error {
 			return err
 		}
 
-		d.Condition = new
+		d.Condition = &new
 
 		if !in.IsNext("]") {
 			return errors.New("Expected ']' at end of condition")
@@ -176,7 +190,8 @@ func parseFlagSet(s *flag.FlagList, in *parser.Input) error {
 			return err
 		}
 
-		*s = append(*s, *flag)
+		//TODO maybe check if already exists
+		(*s)[flag.Name] = flag
 
 		str, _ := in.Next(1)
 		if str != "," {

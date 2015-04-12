@@ -2,16 +2,13 @@ package control
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
-	"github.com/cam72cam/go-lumberjack/log"
-	"github.com/serenitylinux/libspack/dep"
-	"github.com/serenitylinux/libspack/flag"
-	"github.com/serenitylinux/libspack/helpers/json"
-	"github.com/serenitylinux/libspack/misc"
-	"io"
 	"os"
 	"os/exec"
-	"path/filepath"
+
+	"github.com/serenitylinux/libspack/dep"
+	"github.com/serenitylinux/libspack/flag/expr"
 )
 
 type Control struct {
@@ -23,57 +20,26 @@ type Control struct {
 	Src         []string
 	Arch        []string
 
-	Bdeps []string
-	Deps  []string
-	Flags []string
-
-	parsedFlags flag.FlagSetList
-	parsedDeps  dep.DepList
-	parsedBDeps dep.DepList
-
+	Bdeps dep.DepList
+	Deps  dep.DepList
+	Flags expr.FlagSetList
 	//Provides (libjpeg, cc)
 	//Provides Hook (update mime types)
 }
 
-type ControlList []Control
-
 func (c *Control) String() string {
-	return json.Stringify(c)
-}
-
-func (c *Control) UUID() string {
 	return fmt.Sprintf("%s-%s_%d", c.Name, c.Version, c.Iteration)
 }
 
-func (c ControlList) String() string {
-	return json.Stringify(c)
-}
-
-func (c *Control) ToFile(filename string) error {
-	return json.EncodeFile(filename, true, c)
-}
-
-func (c *ControlList) ToFile(filename string) error {
-	return json.EncodeFile(filename, true, c)
-}
-
-func FromFile(filename string) (*Control, error) {
-	var c Control
-	err := json.DecodeFile(filename, &c)
-	return &c, err
-}
-
-func FromReader(reader io.Reader) (*Control, error) {
-	var c Control
-	err := json.DecodeReader(reader, &c)
-	return &c, err
-}
-
-//TODO consolidate into a single function
-
-func fromTemplateString(template string) (*Control, error) {
+func FromTemplateFile(template string) (c Control, err error) {
 	commands := `
-%s
+template=` + template + `
+default=$(basedir $template)/default
+
+. $template
+if [ -f "$default" ]; then
+	. $default
+fi
 
 function lister() {
 	local set i
@@ -104,84 +70,14 @@ cat << EOT
   "Flags": [ $flagsval ]
 },
 EOT`
-	commands = fmt.Sprintf(commands, template)
-
 	var buf bytes.Buffer
 	cmd := exec.Command("bash", "-ec", commands)
 	cmd.Stdout = &buf
 	cmd.Stderr = os.Stderr
-	err := cmd.Run()
+	err = cmd.Run()
 	if err != nil {
-		return nil, err
+		return c, err
 	}
-	return FromReader(bytes.NewReader(buf.Bytes()))
-}
-
-func FromTemplateFile(template string) (*Control, error) {
-	var str string
-	err := misc.WithFileReader(template, func(r io.Reader) {
-		str = misc.ReaderToString(r)
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	//Don't care if does not exist
-	misc.WithFileReader(filepath.Dir(template)+"/default", func(r io.Reader) {
-		str += misc.ReaderToString(r)
-	})
-
-	return fromTemplateString(str)
-}
-
-func (c *Control) ParsedFlags() flag.FlagSetList {
-	if c.parsedFlags == nil {
-		c.parsedFlags = make([]flag.FlagSet, 0)
-		for _, s := range c.Flags {
-			flag, err := flag.FromString(s)
-			if err != nil {
-				log.Warn.Format("Invalid flag in package %s '%s': %s", c.Name, s, err)
-				continue
-			}
-			c.parsedFlags = append(c.parsedFlags, flag)
-		}
-	}
-	return c.parsedFlags
-}
-func (c *Control) DefaultFlags() flag.FlagList {
-	res := make(flag.FlagList, 0)
-	for _, fs := range c.ParsedFlags() {
-		res = append(res, fs.Flag)
-	}
-	return res
-}
-
-func (c *Control) ParsedDeps() dep.DepList {
-	if c.parsedDeps == nil {
-		c.parsedDeps = make(dep.DepList, 0)
-		for _, s := range c.Deps {
-			dep, err := dep.Parse(s)
-			if err != nil {
-				log.Warn.Format("Invalid dep in package %s '%s': %s", c.Name, s, err)
-				continue
-			}
-			c.parsedDeps = append(c.parsedDeps, dep)
-		}
-	}
-	return c.parsedDeps
-}
-
-func (c *Control) ParsedBDeps() dep.DepList {
-	if c.parsedBDeps == nil {
-		c.parsedBDeps = make(dep.DepList, 0)
-		for _, s := range c.Bdeps {
-			dep, err := dep.Parse(s)
-			if err != nil {
-				log.Warn.Format("Invalid Bdep in package %s '%s': %s", c.Name, s, err)
-				continue
-			}
-			c.parsedBDeps = append(c.parsedBDeps, dep)
-		}
-	}
-	return c.parsedBDeps
+	err = json.Unmarshal(buf.Bytes(), &c)
+	return c, err
 }

@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 
 	"github.com/serenitylinux/libspack/control"
-	"github.com/serenitylinux/libspack/dep"
 	"github.com/serenitylinux/libspack/pkginfo"
 )
 
@@ -16,7 +15,7 @@ func (repo *Repo) GetAllControls() ControlMap {
 	return *repo.controls
 }
 
-func (repo *Repo) GetControls(pkgname string) (control.ControlList, bool) {
+func (repo *Repo) GetControls(pkgname string) ([]control.Control, bool) {
 	res, e := repo.GetAllControls()[pkgname]
 	return res, e
 }
@@ -27,7 +26,7 @@ func (repo *Repo) GetLatestControl(pkgname string) (*control.Control, bool) {
 
 	if exists {
 		for _, ctrl := range c {
-			if res == nil || res.UUID() < ctrl.UUID() {
+			if res == nil || res.String() < ctrl.String() {
 				res = &ctrl
 			}
 		}
@@ -41,7 +40,7 @@ func (repo *Repo) GetPackageByVersionChecker(pkgname string, checker func(string
 
 	if exists {
 		for _, ctrl := range c {
-			if (res == nil || res.UUID() < ctrl.UUID()) && checker(ctrl.Version) {
+			if (res == nil || res.String() < ctrl.String()) && checker(ctrl.Version) {
 				res = &ctrl
 			}
 		}
@@ -58,11 +57,11 @@ func (repo *Repo) GetTemplateByControl(c *control.Control) (string, bool) {
 	if !exists {
 		return "", false
 	}
-	byUUID := byName[c.UUID()]
+	byString := byName[c.String()]
 	if !exists {
 		return "", false
 	}
-	return byUUID, true
+	return byString, true
 }
 
 func (repo *Repo) GetSpakgOutput(p *pkginfo.PkgInfo) string {
@@ -70,11 +69,11 @@ func (repo *Repo) GetSpakgOutput(p *pkginfo.PkgInfo) string {
 		os.MkdirAll(SpakgDir+repo.Name, 0755)
 	}
 	repo.spakgDir()
-	return repo.spakgDir() + fmt.Sprintf("%s.spakg", p.UUID())
+	return repo.spakgDir() + fmt.Sprintf("%s.spakg", p)
 }
 
 func (repo *Repo) HasRemoteSpakg(p *pkginfo.PkgInfo) bool {
-	_, exists := (*repo.fetchable)[p.UUID()]
+	_, exists := (*repo.fetchable)[p.String()]
 	return exists
 }
 func (repo *Repo) HasLocalSpakg(p *pkginfo.PkgInfo) bool {
@@ -102,6 +101,7 @@ func (repo *Repo) HasTemplate(c *control.Control) bool {
 	return exists
 }
 
+/*  TODO
 func (repo *Repo) AnyInstalled(pkg string, deps dep.DepList, destdir string) bool {
 	candidates := make([]PkgInstallSet, 0)
 	list, err := repo.pkgsInstalledInRoot(destdir)
@@ -124,7 +124,7 @@ func (repo *Repo) AnyInstalled(pkg string, deps dep.DepList, destdir string) boo
 			if dep.Version2 != nil && !dep.Version2.Accepts(set.PkgInfo.Version) {
 				continue
 			}
-			if dep.Flags != nil && !dep.Flags.IsSubSet(set.PkgInfo.ParsedFlagStates()) {
+			if dep.Flags != nil && !dep.Flags.IsSubSet(set.PkgInfo.FlagStates) {
 				continue
 			}
 			next = append(next, set)
@@ -133,7 +133,7 @@ func (repo *Repo) AnyInstalled(pkg string, deps dep.DepList, destdir string) boo
 	}
 
 	return len(candidates) != 0
-}
+}*/
 
 var cachedInstalledRoots = make(map[string]*PkgInstallSetMap)
 
@@ -158,7 +158,7 @@ func (repo *Repo) IsInstalled(p *pkginfo.PkgInfo, destdir string) bool {
 	if err != nil {
 		return false
 	}
-	_, exists := (*list)[p.UUID()]
+	_, exists := (*list)[p.String()]
 	return exists
 }
 func (repo *Repo) IsAnyInstalled(c *control.Control, destdir string) bool {
@@ -167,7 +167,7 @@ func (repo *Repo) IsAnyInstalled(c *control.Control, destdir string) bool {
 		return false
 	}
 	for _, pkg := range *list {
-		if pkg.Control.UUID() == c.UUID() {
+		if pkg.Control.String() == c.String() {
 			return true
 		}
 	}
@@ -201,7 +201,7 @@ func (repo *Repo) GetInstalled(p *pkginfo.PkgInfo, destdir string) *PkgInstallSe
 		return nil
 	}
 	for _, set := range *list {
-		if set.PkgInfo.UUID() == p.UUID() {
+		if set.PkgInfo.String() == p.String() {
 			return &set
 		}
 	}
@@ -214,7 +214,7 @@ func (repo *Repo) RdepList(p *pkginfo.PkgInfo) []PkgInstallSet {
 
 	for _, set := range *repo.installed {
 		for _, dep := range set.Control.Deps {
-			if dep == p.Name {
+			if dep.Name == p.Name {
 				pkgs = append(pkgs, set)
 			}
 		}
@@ -238,7 +238,7 @@ func (repo *Repo) UninstallList(p *pkginfo.PkgInfo) []PkgInstallSet {
 
 		for _, set := range *repo.installed {
 			for _, dep := range set.Control.Deps {
-				if dep == cur.Name {
+				if dep.Name == cur.Name {
 					pkgs = append(pkgs, set)
 					inner(set.PkgInfo)
 				}

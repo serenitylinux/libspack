@@ -1,6 +1,7 @@
-package flag
+package expr
 
 import (
+	"github.com/serenitylinux/libspack/flag"
 	"github.com/serenitylinux/libspack/parser"
 )
 
@@ -38,7 +39,7 @@ func parseExprList(in *parser.Input) (*exprlist, error) {
 	}
 	return list, nil
 }
-func (list *exprlist) verify(flist *FlagList) bool {
+func (list *exprlist) verify(flist flag.FlatFlagList) bool {
 	if list == nil {
 		return true
 	}

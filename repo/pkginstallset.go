@@ -17,7 +17,7 @@ func NewPkgIS(c *control.Control, p *pkginfo.PkgInfo, hash hash.HashList) *PkgIn
 	return &PkgInstallSet{c, p, hash}
 }
 func (p *PkgInstallSet) ToFile(filename string) error {
-	return json.EncodeFile(filename, true, p)
+	return json.EncodeFile(filename, p)
 }
 func PkgISFromFile(filename string) (p *PkgInstallSet, err error) {
 	var i PkgInstallSet
@@ -29,5 +29,5 @@ func PkgISFromFile(filename string) (p *PkgInstallSet, err error) {
 }
 
 func (repo *Repo) installSetFile(p pkginfo.PkgInfo, basedir string) string {
-	return basedir + repo.installedPkgsDir() + p.UUID() + ".pkgset"
+	return basedir + repo.installedPkgsDir() + p.String() + ".pkgset"
 }

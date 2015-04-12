@@ -2,16 +2,17 @@ package repo
 
 import (
 	"errors"
+	"io/ioutil"
+	"net/url"
+	"os"
+	"regexp"
+
 	"github.com/cam72cam/go-lumberjack/log"
 	"github.com/serenitylinux/libspack/control"
 	"github.com/serenitylinux/libspack/helpers/git"
 	"github.com/serenitylinux/libspack/helpers/http"
 	"github.com/serenitylinux/libspack/helpers/json"
 	"github.com/serenitylinux/libspack/pkginfo"
-	"io/ioutil"
-	"net/url"
-	"os"
-	"regexp"
 )
 
 import . "github.com/serenitylinux/libspack/misc"
@@ -134,15 +135,15 @@ func (repo *Repo) updateControlsFromTemplates() {
 
 		// Initialize list of controls for current name if nessesary
 		if _, exists := list[c.Name]; !exists {
-			list[c.Name] = make(control.ControlList, 0)
+			list[c.Name] = make([]control.Control, 0)
 		}
 
 		if _, exists := (*repo.templateFiles)[c.Name]; !exists {
 			(*repo.templateFiles)[c.Name] = make(map[string]string)
 		}
 
-		(*repo.templateFiles)[c.Name][c.UUID()] = file
-		list[c.Name] = append(list[c.Name], *c)
+		(*repo.templateFiles)[c.Name][c.String()] = file
+		list[c.Name] = append(list[c.Name], c)
 	}
 
 	err := readAll(dir, regexp.MustCompile(".*\\.pie"), readFunc)
@@ -153,8 +154,8 @@ func (repo *Repo) updateControlsFromTemplates() {
 	}
 
 	repo.controls = &list
-	json.EncodeFile(repo.controlCacheFile(), true, repo.controls)
-	json.EncodeFile(repo.templateListCacheFile(), true, repo.templateFiles)
+	json.EncodeFile(repo.controlCacheFile(), repo.controls)
+	json.EncodeFile(repo.templateListCacheFile(), repo.templateFiles)
 }
 
 func (repo *Repo) updateControlsFromRemote() {
@@ -162,16 +163,17 @@ func (repo *Repo) updateControlsFromRemote() {
 	list := make(ControlMap)
 
 	readFunc := func(file string) {
-		c, err := control.FromFile(file)
+		var c control.Control
+		err := json.DecodeFile(file, &c)
 		if err != nil {
 			log.Warn.Format("Invalid control %s in repo %s", file, repo.Name)
 			return
 		}
 
 		if _, exists := list[c.Name]; !exists {
-			list[c.Name] = make(control.ControlList, 0)
+			list[c.Name] = make([]control.Control, 0)
 		}
-		list[c.Name] = append(list[c.Name], *c)
+		list[c.Name] = append(list[c.Name], c)
 	}
 
 	err := readAll(repo.packagesDir(), regexp.MustCompile(".*.control"), readFunc)
@@ -182,7 +184,7 @@ func (repo *Repo) updateControlsFromRemote() {
 	}
 
 	repo.controls = &list
-	json.EncodeFile(repo.controlCacheFile(), true, repo.controls)
+	json.EncodeFile(repo.controlCacheFile(), repo.controls)
 }
 
 func (repo *Repo) updatePkgInfosFromRemote() {
@@ -190,18 +192,19 @@ func (repo *Repo) updatePkgInfosFromRemote() {
 	list := make(PkgInfoMap)
 
 	readFunc := func(file string) {
-		pki, err := pkginfo.FromFile(file)
+		var pki pkginfo.PkgInfo
+		err := json.DecodeFile(file, pki)
 
 		if err != nil {
 			log.Warn.Format("Invalid pkginfo %s in repo %s", file, repo.Name)
 			return
 		}
 
-		key := pki.UUID()
+		key := pki.String()
 		if _, exists := list[key]; !exists {
 			list[key] = make([]pkginfo.PkgInfo, 0)
 		}
-		list[key] = append(list[key], *pki)
+		list[key] = append(list[key], pki)
 	}
 
 	err := readAll(repo.packagesDir(), regexp.MustCompile(".*.pkginfo"), readFunc)
@@ -211,7 +214,7 @@ func (repo *Repo) updatePkgInfosFromRemote() {
 	}
 
 	repo.fetchable = &list
-	json.EncodeFile(repo.pkgInfoCacheFile(), true, repo.fetchable)
+	json.EncodeFile(repo.pkgInfoCacheFile(), repo.fetchable)
 }
 
 func (repo *Repo) loadControlCache() {
@@ -283,7 +286,7 @@ func installedPackageList(dir string) (*PkgInstallSetMap, error) {
 			return
 		}
 
-		list[ps.PkgInfo.UUID()] = *ps
+		list[ps.PkgInfo.String()] = *ps
 	}
 
 	err := readAll(dir, regexp.MustCompile(".*.pkgset"), readFunc)

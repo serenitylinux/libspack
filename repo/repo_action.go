@@ -1,16 +1,16 @@
 package repo
 
 import (
-	"errors"
 	"fmt"
+	"net/url"
+	"os"
+
 	"github.com/cam72cam/go-lumberjack/log"
 	"github.com/serenitylinux/libspack/control"
 	"github.com/serenitylinux/libspack/hash"
 	"github.com/serenitylinux/libspack/helpers/http"
 	"github.com/serenitylinux/libspack/pkginfo"
 	"github.com/serenitylinux/libspack/spakg"
-	"net/url"
-	"os"
 )
 import . "github.com/serenitylinux/libspack/misc"
 
@@ -18,7 +18,7 @@ func (repo *Repo) FetchIfNotCachedSpakg(p *pkginfo.PkgInfo) error {
 	out := repo.GetSpakgOutput(p)
 	if !PathExists(out) {
 		if repo.HasRemoteSpakg(p) {
-			src := repo.RemotePackages + "/pkgs/" + url.QueryEscape(fmt.Sprintf("%s.spakg", p.UUID()))
+			src := repo.RemotePackages + "/pkgs/" + url.QueryEscape(fmt.Sprintf("%s.spakg", p))
 			log.Info.Format("Fetching %s", src)
 			err := http.HttpFetchFileProgress(src, out, true)
 			if err != nil {
@@ -26,7 +26,7 @@ func (repo *Repo) FetchIfNotCachedSpakg(p *pkginfo.PkgInfo) error {
 			}
 			return err
 		} else {
-			return errors.New("PkgInfo not in repo: " + p.UUID())
+			return fmt.Errorf("PkgInfo not in repo: %s", p)
 		}
 	}
 	return nil
@@ -47,7 +47,7 @@ func (repo *Repo) Install(c control.Control, p pkginfo.PkgInfo, hl hash.HashList
 
 	err = ps.ToFile(repo.installSetFile(p, basedir))
 
-	if old != nil && old.PkgInfo.UUID() != p.UUID() {
+	if old != nil && old.PkgInfo.String() != p.String() {
 		for file, _ := range old.Hashes {
 			if _, exists := hl[file]; !exists {
 				err := os.RemoveAll(file)
@@ -71,7 +71,7 @@ func (repo *Repo) Uninstall(p *pkginfo.PkgInfo, destdir string) error {
 	inst := repo.GetInstalled(p, destdir)
 	basedir := "/"
 	if inst != nil {
-		log.Info.Format("Removing %s", inst.PkgInfo.UUID())
+		log.Info.Format("Removing %s", inst.PkgInfo)
 		for f, _ := range inst.Hashes {
 			log.Debug.Println("Remove: " + basedir + f)
 			err := os.Remove(basedir + f)
@@ -80,7 +80,7 @@ func (repo *Repo) Uninstall(p *pkginfo.PkgInfo, destdir string) error {
 				//Do we return or keep trying?
 			}
 		}
-		err := os.Remove(basedir + repo.installedPkgsDir() + inst.PkgInfo.UUID() + ".pkgset")
+		err := os.Remove(basedir + repo.installedPkgsDir() + inst.PkgInfo.String() + ".pkgset")
 		if err != nil {
 			return err
 		}
