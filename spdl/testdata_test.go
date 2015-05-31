@@ -3,7 +3,7 @@ package spdl
 var and op = And
 var or op = Or
 
-var fulldepJSON = "[-cond && [-baz || +bar]] basic >=3ac <=10.4b (+dev ~doc(+foo || [-baza && +build]) ?other(-bazh))"
+var fulldepJSON = "[-cond && (-baz || +bar)] basic >=3ac <=10.4b (+dev ~doc(+foo || (-baza && +build)) ?other(-bazh))"
 var fulldep = Dep{
 	Condition: &ExprList{
 		e:  expr{flag: FlatFlag{Name: "cond", Enabled: false}},

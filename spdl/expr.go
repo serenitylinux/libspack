@@ -16,7 +16,7 @@ func parseExpr(in *parser.Input) (*expr, error) {
 	e := new(expr)
 	s, _ := in.Peek(1)
 	switch s {
-	case "[":
+	case "(":
 		in.Next(1)
 
 		newl, err := parseExprList(in)
@@ -31,7 +31,7 @@ func parseExpr(in *parser.Input) (*expr, error) {
 		e.list = newl
 
 		s, _ := in.Next(1)
-		if s != "]" {
+		if s != ")" {
 			return nil, errors.New("Expression: Unexpected char '" + s + "'")
 		}
 	case "]", ")":
@@ -55,7 +55,7 @@ func (e *expr) verify(flist FlatFlagList) bool {
 }
 func (e *expr) String() string {
 	if e.list != nil {
-		return "[" + e.list.String() + "]"
+		return "(" + e.list.String() + ")"
 	} else {
 		return e.flag.String()
 	}

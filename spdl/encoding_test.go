@@ -204,7 +204,7 @@ func TestFlagExprEncoding(t *testing.T) {
 		},
 		{
 			name: "Advanced",
-			json: "+foo(-cond && [-baz || +bar])",
+			json: "+foo(-cond && (-baz || +bar))",
 			expect: FlagExpr{
 				Flag: FlatFlag{Name: "foo", Enabled: true},
 				list: &ExprList{

@@ -31,7 +31,7 @@ func TestDepParse(t *testing.T) {
 		},
 		{
 			name:  "Advanced Condition",
-			input: "[-cond && [-baz || +bar]] advanced",
+			input: "[-cond && (-baz || +bar)] advanced",
 			expect: Dep{
 				Condition: &ExprList{
 					e:  expr{flag: FlatFlag{Name: "cond", Enabled: false}},
@@ -114,7 +114,7 @@ func TestDepParse(t *testing.T) {
 		},
 		{
 			name:  "Advanced Flags",
-			input: "basic(+dev ~doc(+foo || [-baza && +build]) ?other(-bazh))",
+			input: "basic(+dev ~doc(+foo || (-baza && +build)) ?other(-bazh))",
 			expect: Dep{
 				Name: "basic",
 				Flags: &FlagList{
