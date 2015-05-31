@@ -1,17 +1,27 @@
-package expr
+package flag
 
 import (
 	"errors"
 	"strings"
 
-	"github.com/serenitylinux/libspack/flag"
 	"github.com/serenitylinux/libspack/parser"
 )
 
-// Represents a flag state and a possible expression dependency
-// +flag(-foo && +bar)
+/* Represents a flag state and a possible expression dependency
+-dev([+qt && -gtk] || [-qt && +gtk])
+[is_enabled_default]name(deps)
+
+exprlist  = expr + exprlist'
+exprlist' = arg + exprlist || \0
+
+expr = sub || flag
+arg = '&&,||'
+
+sub = '[' + exprlist + ']'
+*/
+
 type FlagSet struct {
-	Flag flag.FlatFlag
+	Flag FlatFlag
 	list *ExprList
 }
 
@@ -28,7 +38,7 @@ func fromString(s string) (fs FlagSet, err error) {
 	s = strings.Replace(s, " ", "", -1)
 	in := parser.NewInput(s)
 
-	f, err := flag.ParseFlat(&in)
+	f, err := ParseFlat(&in)
 	if err != nil {
 		return fs, err
 	}
@@ -62,7 +72,7 @@ func fromString(s string) (fs FlagSet, err error) {
 	return
 }
 
-func (f FlagSet) Verify(list flag.FlatFlagList) bool {
+func (f FlagSet) Verify(list FlatFlagList) bool {
 	if list.IsEnabled(f.Flag.Name) {
 		return f.list.Enabled(list)
 	}

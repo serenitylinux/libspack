@@ -1,15 +1,14 @@
-package expr
+package flag
 
 import (
 	"errors"
 
-	"github.com/serenitylinux/libspack/flag"
 	"github.com/serenitylinux/libspack/parser"
 )
 
 type expr struct {
 	list *ExprList
-	flag flag.FlatFlag
+	flag FlatFlag
 }
 
 func parseExpr(in *parser.Input) (*expr, error) {
@@ -33,7 +32,7 @@ func parseExpr(in *parser.Input) (*expr, error) {
 			return nil, errors.New("Expression: Unexpected char '" + s + "'")
 		}
 	} else {
-		newf, err := flag.ParseFlat(in)
+		newf, err := ParseFlat(in)
 		if err != nil {
 			return nil, err
 		}
@@ -42,7 +41,7 @@ func parseExpr(in *parser.Input) (*expr, error) {
 	}
 	return e, nil
 }
-func (e *expr) verify(flist flag.FlatFlagList) bool {
+func (e *expr) verify(flist FlatFlagList) bool {
 	if e.list != nil {
 		return e.list.Enabled(flist)
 	} else {

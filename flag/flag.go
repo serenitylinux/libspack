@@ -2,16 +2,6 @@ package flag
 
 /*
 
--dev([+qt && -gtk] || [-qt && +gtk])
-[is_enabled_default]name(deps)
-
-exprlist  = expr + exprlist'
-exprlist' = arg + exprlist || \0
-
-expr = sub || flag
-arg = '&&,||'
-
-sub = '[' + exprlist + ']'
 flag = '[+,-,?,~]s*'
 
 */
