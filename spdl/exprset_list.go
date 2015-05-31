@@ -1,4 +1,4 @@
-package flag
+package spdl
 
 // FlagSetList represents a " " seperated list of flags
 type FlagSetList []FlagSet

@@ -1,4 +1,4 @@
-package flag
+package spdl
 
 type State int
 

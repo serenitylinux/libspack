@@ -1,11 +1,11 @@
-package flag_test
+package spdl_test
 
 import (
 	"encoding/json"
 	"fmt"
 	"testing"
 
-	"github.com/serenitylinux/libspack/flag"
+	"github.com/serenitylinux/libspack/spdl"
 )
 
 /* Errata:
@@ -38,7 +38,7 @@ func TestFlagListEncoding(t *testing.T) {
 		t.Logf(c.name)
 		str := fmt.Sprintf(`{"Flags":%s}`, c.json)
 		var res struct {
-			Flags flag.FlagList
+			Flags spdl.FlagList
 		}
 		err := json.Unmarshal([]byte(str), &res)
 		if c.err {
@@ -101,7 +101,7 @@ func TestFlatFlagListEncoding(t *testing.T) {
 	for _, c := range cases {
 		str := fmt.Sprintf(`{"Flags":%s}`, c.json)
 		var res struct {
-			Flags flag.FlatFlagList
+			Flags spdl.FlatFlagList
 		}
 		err := json.Unmarshal([]byte(str), &res)
 		if c.err {
