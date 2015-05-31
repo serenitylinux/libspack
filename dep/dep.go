@@ -2,8 +2,8 @@ package dep
 
 /*
 
-[condition] name      versionspec        (depends)
-[+-flag]  pkgname<>=version<>=version(+flag -flag ?flag ~flag)
+[condition] name      versionspec              (depends)
+[+flag && -flag]  pkgname<>=version<>=version  (+flag -flag ?flag ?flag[+flag && -flag] ~flag)
 
 FlagSpec:
 +name
@@ -35,11 +35,12 @@ import (
 	"strings"
 
 	"github.com/serenitylinux/libspack/flag"
+	"github.com/serenitylinux/libspack/flag/expr"
 	"github.com/serenitylinux/libspack/parser"
 )
 
 type Dep struct {
-	Condition *flag.Flag
+	Condition *expr.ExprList
 	Name      string
 	Version1  *Version
 	Version2  *Version
@@ -125,12 +126,12 @@ func (d *Dep) parse(in *parser.Input) error {
 	if conditionPeek(in) {
 		in.Next(1)
 
-		new, err := flag.Parse(in)
+		new, err := expr.ParseExprList(in)
 		if err != nil {
 			return err
 		}
 
-		d.Condition = &new
+		d.Condition = new
 
 		if !in.IsNext("]") {
 			return errors.New("Expected ']' at end of condition")
@@ -228,7 +229,7 @@ func (v *Version) parse(in *parser.Input) error {
 
 type DepList []Dep
 
-func (list *DepList) EnabledFromFlags(fs flag.FlagList) DepList {
+func (list *DepList) EnabledFromFlags(fs flag.FlatFlagList) DepList {
 	res := make(DepList, 0)
 	for _, dep := range *list {
 		//We have no include condition
@@ -237,11 +238,9 @@ func (list *DepList) EnabledFromFlags(fs flag.FlagList) DepList {
 			continue
 		}
 
-		for _, flag := range fs {
-			if *dep.Condition == flag {
-				res = append(res, dep)
-				break
-			}
+		if dep.Condition.Enabled(fs) {
+			res = append(res, dep)
+			break
 		}
 	}
 	return res

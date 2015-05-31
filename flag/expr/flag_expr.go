@@ -8,7 +8,7 @@ import (
 )
 
 type expr struct {
-	list *exprlist
+	list *ExprList
 	flag flag.FlatFlag
 }
 
@@ -17,7 +17,7 @@ func parseExpr(in *parser.Input) (*expr, error) {
 	if s, _ := in.Peek(1); s == "[" {
 		in.Next(1)
 
-		newl, err := parseExprList(in)
+		newl, err := ParseExprList(in)
 		if err != nil {
 			return nil, err
 		}
@@ -44,7 +44,7 @@ func parseExpr(in *parser.Input) (*expr, error) {
 }
 func (e *expr) verify(flist flag.FlatFlagList) bool {
 	if e.list != nil {
-		return e.list.verify(flist)
+		return e.list.Enabled(flist)
 	} else {
 		return e.flag.Enabled == flist.IsEnabled(e.flag.Name)
 	}

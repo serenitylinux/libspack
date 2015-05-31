@@ -12,7 +12,7 @@ import (
 // +flag(-foo && +bar)
 type FlagSet struct {
 	Flag flag.FlatFlag
-	list *exprlist
+	list *ExprList
 }
 
 func (fs *FlagSet) UnmarshalJSON(data []byte) (err error) {
@@ -43,8 +43,8 @@ func fromString(s string) (fs FlagSet, err error) {
 		return fs, errors.New("Missing '(' after flag")
 	}
 
-	var l *exprlist
-	l, err = parseExprList(&in)
+	var l *ExprList
+	l, err = ParseExprList(&in)
 	if err != nil {
 		return
 	}
@@ -64,7 +64,7 @@ func fromString(s string) (fs FlagSet, err error) {
 
 func (f FlagSet) Verify(list flag.FlatFlagList) bool {
 	if list.IsEnabled(f.Flag.Name) {
-		return f.list.verify(list)
+		return f.list.Enabled(list)
 	}
 
 	return true

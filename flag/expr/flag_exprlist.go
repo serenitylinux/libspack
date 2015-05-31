@@ -5,14 +5,14 @@ import (
 	"github.com/serenitylinux/libspack/parser"
 )
 
-type exprlist struct {
+type ExprList struct {
 	e    expr
 	op   *op
-	next *exprlist
+	next *ExprList
 }
 
-func parseExprList(in *parser.Input) (*exprlist, error) {
-	list := new(exprlist)
+func ParseExprList(in *parser.Input) (*ExprList, error) {
+	list := new(ExprList)
 
 	e, err := parseExpr(in)
 	if err != nil {
@@ -29,7 +29,7 @@ func parseExprList(in *parser.Input) (*exprlist, error) {
 			return nil, err
 		}
 
-		nel, err := parseExprList(in)
+		nel, err := ParseExprList(in)
 		if err != nil {
 			return nil, err
 		}
@@ -39,7 +39,7 @@ func parseExprList(in *parser.Input) (*exprlist, error) {
 	}
 	return list, nil
 }
-func (list *exprlist) verify(flist flag.FlatFlagList) bool {
+func (list *ExprList) Enabled(flist flag.FlatFlagList) bool {
 	if list == nil {
 		return true
 	}
@@ -47,12 +47,12 @@ func (list *exprlist) verify(flist flag.FlatFlagList) bool {
 		return list.e.verify(flist)
 	}
 	if *list.op == And {
-		return list.e.verify(flist) && list.next.verify(flist)
+		return list.e.verify(flist) && list.next.Enabled(flist)
 	} else {
-		return list.e.verify(flist) || list.next.verify(flist)
+		return list.e.verify(flist) || list.next.Enabled(flist)
 	}
 }
-func (list *exprlist) String() string {
+func (list *ExprList) String() string {
 	if list == nil {
 		return ""
 	}
