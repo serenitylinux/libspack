@@ -1,11 +1,10 @@
-package spdl_test
+package spdl
 
 import (
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"testing"
-
-	"github.com/serenitylinux/libspack/spdl"
 )
 
 /* Errata:
@@ -38,7 +37,7 @@ func TestFlagListEncoding(t *testing.T) {
 		t.Logf(c.name)
 		str := fmt.Sprintf(`{"Flags":%s}`, c.json)
 		var res struct {
-			Flags spdl.FlagList
+			Flags FlagList
 		}
 		err := json.Unmarshal([]byte(str), &res)
 		if c.err {
@@ -99,9 +98,10 @@ func TestFlatFlagListEncoding(t *testing.T) {
 		},
 	}
 	for _, c := range cases {
+		t.Log(c.name)
 		str := fmt.Sprintf(`{"Flags":%s}`, c.json)
 		var res struct {
-			Flags spdl.FlatFlagList
+			Flags FlatFlagList
 		}
 		err := json.Unmarshal([]byte(str), &res)
 		if c.err {
@@ -128,5 +128,137 @@ func TestFlatFlagListEncoding(t *testing.T) {
 			continue
 		}
 		t.Logf("Ok")
+	}
+}
+
+func TestDepEncoding(t *testing.T) {
+	type Case struct {
+		name   string
+		json   string
+		expect Dep
+	}
+	cases := []Case{
+		{
+			name:   "Basic",
+			json:   "foo",
+			expect: Dep{Name: "foo"},
+		},
+		{
+			name:   "ALL THE THINGS!",
+			json:   fulldepJSON,
+			expect: fulldep,
+		},
+	}
+	for _, c := range cases {
+		t.Log(c.name)
+		str := fmt.Sprintf(`{"Dep":"%s"}`, c.json)
+		var res struct {
+			Dep Dep
+		}
+		err := json.Unmarshal([]byte(str), &res)
+		if err != nil {
+			t.Errorf("Unexpected error %s", err.Error())
+			continue
+		}
+
+		if !reflect.DeepEqual(c.expect, res.Dep) {
+			t.Errorf("Expected \n%+v\n got \n%+v", c.expect, res.Dep)
+		}
+
+		//Re-Encode
+		bres, err := json.Marshal(&res)
+		if err != nil {
+			t.Errorf("Unexpected error %s", err.Error())
+			continue
+		}
+
+		res.Dep = Dep{}
+		err = json.Unmarshal(bres, &res)
+		if err != nil {
+			t.Errorf("Unexpected error %s", err.Error())
+			continue
+		}
+
+		if !reflect.DeepEqual(c.expect, res.Dep) {
+			t.Errorf("Expected \n%+v\n got \n%+v", c.expect, res.Dep)
+		}
+
+		t.Logf("Ok")
+	}
+}
+
+func TestFlagExprEncoding(t *testing.T) {
+	type Case struct {
+		name   string
+		json   string
+		expect FlagExpr
+	}
+
+	cases := []Case{
+		{
+			name: "Basic",
+			json: "+foo",
+			expect: FlagExpr{
+				Flag: FlatFlag{Name: "foo", Enabled: true},
+			},
+		},
+		{
+			name: "Advanced",
+			json: "+foo(-cond && [-baz || +bar])",
+			expect: FlagExpr{
+				Flag: FlatFlag{Name: "foo", Enabled: true},
+				list: &ExprList{
+					e:  expr{flag: FlatFlag{Name: "cond", Enabled: false}},
+					op: &and,
+					next: &ExprList{
+						e: expr{
+							list: &ExprList{
+								e:  expr{flag: FlatFlag{Name: "baz", Enabled: false}},
+								op: &or,
+								next: &ExprList{
+									e: expr{flag: FlatFlag{Name: "bar", Enabled: true}},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	for _, c := range cases {
+		t.Log(c.name)
+
+		str := fmt.Sprintf(`{"FlagExpr":"%s"}`, c.json)
+		var res struct {
+			FlagExpr FlagExpr
+		}
+		err := json.Unmarshal([]byte(str), &res)
+		if err != nil {
+			t.Errorf("Unexpected error %s", err.Error())
+			continue
+		}
+
+		if !reflect.DeepEqual(c.expect, res.FlagExpr) {
+			t.Errorf("Expected1 \n%+v\n got \n%+v", c.expect, res.FlagExpr)
+		}
+
+		//Re-Encode
+		bres, err := json.Marshal(&res)
+		if err != nil {
+			t.Errorf("Unexpected error %s", err.Error())
+			continue
+		}
+
+		res.FlagExpr = FlagExpr{}
+		err = json.Unmarshal(bres, &res)
+		if err != nil {
+			t.Errorf("Unexpected error %s", err.Error())
+			continue
+		}
+
+		if !reflect.DeepEqual(c.expect, res.FlagExpr) {
+			t.Errorf("Expected \n%+v\n got \n%+v", c.expect, res.FlagExpr)
+		}
+		t.Log("Ok")
 	}
 }

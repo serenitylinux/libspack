@@ -119,7 +119,7 @@ func Parse(in *parser.Input) (f Flag, err error) {
 	}
 
 	next, _ := in.Peek(1)
-	if next == "(" {
+	if next == "(" && f.State != Enabled && f.State != Disabled {
 		in.Next(1)
 		l, err := parseExprList(in)
 		if err != nil {

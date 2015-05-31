@@ -66,19 +66,33 @@ func (fl FlatFlagList) MarshalJSON() ([]byte, error) {
 }
 
 func (fs *FlagExpr) UnmarshalJSON(data []byte) (err error) {
-	*fs, err = fromString(string(data))
+	var str string
+
+	err = json.Unmarshal(data, &str)
+	if err != nil {
+		return err
+	}
+
+	*fs, err = fromString(str)
 	return err
 }
 
-func (fs *FlagExpr) MarshalJSON() ([]byte, error) {
-	return []byte(fs.String()), nil
+func (fs FlagExpr) MarshalJSON() ([]byte, error) {
+	return json.Marshal(fs.String())
 }
 
 func (d *Dep) UnmarshalJSON(data []byte) (err error) {
-	*d, err = ParseDep(string(data))
+	var str string
+
+	err = json.Unmarshal(data, &str)
+	if err != nil {
+		return err
+	}
+
+	*d, err = ParseDep(str)
 	return err
 }
 
-func (d *Dep) MarshalJSON() ([]byte, error) {
-	return []byte(d.String()), nil
+func (d Dep) MarshalJSON() ([]byte, error) {
+	return json.Marshal(d.String())
 }

@@ -40,7 +40,11 @@ type Dep struct {
 }
 
 func (d *Dep) String() string {
-	res := d.Name + d.Version1.String() + d.Version2.String()
+	var res string
+	if d.Condition != nil {
+		res = "[" + d.Condition.String() + "]"
+	}
+	res += d.Name + d.Version1.String() + d.Version2.String()
 	if d.Flags != nil {
 		res += "(" + d.Flags.String() + ")"
 	}

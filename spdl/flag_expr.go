@@ -31,6 +31,10 @@ func fromString(s string) (fs FlagExpr, err error) {
 		return fs, errors.New("Missing '(' after flag")
 	}
 
+	if s, _ := in.Peek(1); s == ")" { //format flag()
+		return fs, err
+	}
+
 	var l *ExprList
 	l, err = parseExprList(&in)
 	if err != nil {
@@ -59,5 +63,9 @@ func (f FlagExpr) Verify(list FlatFlagList) bool {
 }
 
 func (f FlagExpr) String() string {
-	return f.Flag.ColorString() + "(" + f.list.String() + ")"
+	var rest string
+	if f.list != nil {
+		rest = "(" + f.list.String() + ")"
+	}
+	return f.Flag.String() + rest
 }
