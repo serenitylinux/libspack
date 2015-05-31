@@ -230,6 +230,72 @@ func TestDepParse(t *testing.T) {
 			t.Errorf("Expected \n%+v\ngot \n%+v", c.expect, actual)
 			continue
 		}
+
+		//Make sure string does not panic
+		actual.String()
+
 		t.Logf("Ok")
+	}
+}
+
+func TestDepVersionAccepts(t *testing.T) {
+	type Case struct {
+		name   string
+		ver    Version
+		str    string
+		expect bool
+	}
+
+	cases := []Case{
+		{
+			name:   "GT OK",
+			ver:    Version{typ: GT, ver: "10"},
+			str:    "11",
+			expect: true,
+		},
+		{
+			name:   "GT NOK",
+			ver:    Version{typ: GT, ver: "10"},
+			str:    "9",
+			expect: false,
+		},
+		{
+			name:   "LT OK",
+			ver:    Version{typ: LT, ver: "10"},
+			str:    "9",
+			expect: true,
+		},
+		{
+			name:   "LT NOK",
+			ver:    Version{typ: LT, ver: "10"},
+			str:    "11",
+			expect: false,
+		},
+		{
+			name:   "EQ OK",
+			ver:    Version{typ: EQ, ver: "10"},
+			str:    "10",
+			expect: true,
+		},
+		{
+			name:   "EQ NOK",
+			ver:    Version{typ: EQ, ver: "10"},
+			str:    "11",
+			expect: false,
+		},
+	}
+
+	for _, c := range cases {
+		t.Log(c.name)
+		actual := c.ver.Accepts(c.str)
+		if c.expect != actual {
+			tobe := "to be"
+			if !c.expect {
+				tobe = "not to be"
+			} //what was the question?
+			t.Errorf("Expected %s %s accepted by %s", c.str, tobe, c.ver.String())
+			continue
+		}
+		t.Log("Ok")
 	}
 }

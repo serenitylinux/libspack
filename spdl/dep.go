@@ -27,6 +27,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/mcuadros/go-version"
 	"github.com/serenitylinux/libspack/parser"
 )
 
@@ -77,11 +78,11 @@ func (v *Version) String() string {
 func (v *Version) Accepts(verstr string) bool {
 	switch v.typ {
 	case GT:
-		return verstr >= v.ver
+		return version.Compare(verstr, v.ver, ">=")
 	case LT:
-		return verstr <= v.ver
+		return version.Compare(verstr, v.ver, "<=")
 	case EQ:
-		return verstr == v.ver
+		return version.Compare(verstr, v.ver, "==")
 	}
 	panic(errors.New(fmt.Sprintf("Invalid version value: %d", v.typ)))
 }
