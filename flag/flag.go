@@ -101,7 +101,7 @@ func (f Flag) Flat() FlatFlag {
 	return FlatFlag{Name: f.Name, Enabled: f.IsEnabled()}
 }
 
-func (f Flag) ToFlat(def bool) FlatFlag {
+func (f Flag) FlatWithDefault(def bool) FlatFlag {
 	return FlatFlag{Name: f.Name, Enabled: f.Enabled(def)}
 }
 

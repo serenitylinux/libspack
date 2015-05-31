@@ -77,7 +77,7 @@ func (l FlagList) WithDefaults(defaults FlatFlagList) (FlatFlagList, error) {
 			newl[flag.Name] = flag.Flat()
 		} else {
 			if def, ok := defaults[flag.Name]; ok {
-				newl[flag.Name] = flag.ToFlat(def.Enabled)
+				newl[flag.Name] = flag.FlatWithDefault(def.Enabled)
 			} else {
 				return nil, fmt.Errorf("Default for flag %s not found", flag.Name)
 			}
