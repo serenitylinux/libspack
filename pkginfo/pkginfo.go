@@ -59,5 +59,5 @@ func (p *PkgInfo) SetFlagStates(states []flag.FlatFlag) {
 }
 
 func (p *PkgInfo) Satisfies(flags flag.FlatFlagList) bool {
-	return flags.IsSubSetOf(p.FlagStates)
+	return flags.IsSubsetOf(p.FlagStates)
 }

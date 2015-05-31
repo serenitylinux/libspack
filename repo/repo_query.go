@@ -124,7 +124,7 @@ func (repo *Repo) AnyInstalled(pkg string, deps dep.DepList, destdir string) boo
 			if dep.Version2 != nil && !dep.Version2.Accepts(set.PkgInfo.Version) {
 				continue
 			}
-			if dep.Flags != nil && !dep.Flags.IsSubSet(set.PkgInfo.FlagStates) {
+			if dep.Flags != nil && !dep.Flags.IsSubsetOf(set.PkgInfo.FlagStates) {
 				continue
 			}
 			next = append(next, set)

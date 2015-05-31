@@ -9,7 +9,7 @@ type FlagList map[string]Flag
 type FlatFlagList map[string]FlatFlag
 
 func (l FlagList) String() string {
-	res := make([]string, 0)
+	res := make([]string, 0, len(l))
 	for _, flag := range l {
 		res = append(res, flag.String())
 	}
@@ -17,7 +17,7 @@ func (l FlagList) String() string {
 }
 
 func (l FlatFlagList) String() string {
-	res := make([]string, 0)
+	res := make([]string, 0, len(l))
 	for _, flag := range l {
 		res = append(res, flag.String())
 	}
@@ -25,7 +25,7 @@ func (l FlatFlagList) String() string {
 }
 
 func (l FlagList) ColorString() string {
-	res := make([]string, 0)
+	res := make([]string, 0, len(l))
 	for _, flag := range l {
 		res = append(res, flag.ColorString())
 	}
@@ -33,14 +33,14 @@ func (l FlagList) ColorString() string {
 }
 
 func (l FlatFlagList) ColorString() string {
-	res := make([]string, 0)
+	res := make([]string, 0, len(l))
 	for _, flag := range l {
 		res = append(res, flag.ColorString())
 	}
 	return strings.Join(res, " ")
 }
 
-func (l FlatFlagList) IsSubSetOf(ol FlatFlagList) bool {
+func (l FlatFlagList) IsSubsetOf(ol FlatFlagList) bool {
 	for _, flag := range l {
 		if oflag, found := ol[flag.Name]; found {
 			if oflag.Enabled != flag.Enabled {
@@ -60,14 +60,14 @@ func (l FlatFlagList) IsEnabled(f string) bool {
 	return false
 }
 
-func (l *FlagList) Clone() *FlagList {
-	newl := make(FlagList)
+func (l FlagList) Clone() FlagList {
+	newl := make(FlagList, len(l))
 
-	for i, flag := range *l {
+	for i, flag := range l {
 		newl[i] = Flag{flag.Name, flag.State}
 	}
 
-	return &newl
+	return newl
 }
 
 func (l FlagList) WithDefaults(defaults FlatFlagList) (FlatFlagList, error) {
