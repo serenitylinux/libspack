@@ -70,18 +70,11 @@ func (l FlagList) Clone() FlagList {
 func (l FlagList) WithDefaults(defaults FlatFlagList) (FlatFlagList, error) {
 	newl := make(FlatFlagList)
 	for _, flag := range l {
-		newl[flag.Name] = flag.FlatWithDefault(defaults)
-		/* TODO MOVE
-		if flag.IsFlat() {
-			newl[flag.Name] = flag.Flat()
-		} else {
-
-			if def, ok := defaults[flag.Name]; ok {
-				newl[flag.Name] = flag.FlatWithDefault(def.Enabled)
-			} else {
-				return nil, fmt.Errorf("Default for flag %s not found", flag.Name)
-			}
-		}*/
+		flat, err := flag.FlatWithDefault(defaults)
+		if err != nil {
+			return nil, err
+		}
+		newl[flag.Name] = flat
 	}
 	return newl, nil
 }

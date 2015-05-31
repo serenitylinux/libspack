@@ -69,16 +69,27 @@ func (f Flag) IsEnabled() bool {
 	}
 }
 
-func (f Flag) Enabled(ffl FlatFlagList) bool {
+func (f Flag) EnabledEval(ffl FlatFlagList) (bool, error) {
 	switch f.State {
 	case Enabled:
-		return false
+		return true, nil
 	case Disabled:
-		return true
-	case Inherit:
-		return false //TODO return def
-	case Invert:
-		return false //TODO return !def
+		return false, nil
+	case Inherit, Invert:
+		var res bool
+		if f.Expr == nil {
+			if fl, ok := ffl[f.Name]; ok {
+				res = fl.Enabled
+			} else {
+				return false, errors.New("Dependent flag not found")
+			}
+		} else {
+			res = f.Expr.Enabled(ffl) //TODO Expr Eval Error
+		}
+		if f.State == Invert {
+			res = !res
+		}
+		return res, nil
 	default:
 		panic("Invalid flag state")
 	}
@@ -97,8 +108,12 @@ func (f Flag) Flat() FlatFlag {
 	return FlatFlag{Name: f.Name, Enabled: f.IsEnabled()}
 }
 
-func (f Flag) FlatWithDefault(ffl FlatFlagList) FlatFlag {
-	return FlatFlag{Name: f.Name, Enabled: f.Enabled(ffl)}
+func (f Flag) FlatWithDefault(ffl FlatFlagList) (FlatFlag, error) {
+	en, err := f.EnabledEval(ffl)
+	if err != nil {
+		return FlatFlag{}, err
+	}
+	return FlatFlag{Name: f.Name, Enabled: en}, nil
 }
 
 func Parse(in *parser.Input) (f Flag, err error) {
