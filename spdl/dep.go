@@ -66,20 +66,20 @@ func (v *Version) String() string {
 
 	switch v.typ {
 	case GT:
-		s = ">"
+		s = ">="
 	case LT:
-		s = "<"
+		s = "<="
 	case EQ:
-		s = "="
+		s = "=="
 	}
 	return s + v.ver
 }
 func (v *Version) Accepts(verstr string) bool {
 	switch v.typ {
 	case GT:
-		return verstr > v.ver
+		return verstr >= v.ver
 	case LT:
-		return verstr < v.ver
+		return verstr <= v.ver
 	case EQ:
 		return verstr == v.ver
 	}
