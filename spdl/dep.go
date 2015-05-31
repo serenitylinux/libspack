@@ -1,16 +1,9 @@
-package dep
+package spdl
 
 /*
 
-[condition] name      versionspec              (depends)
-[+flag && -flag]  pkgname<>=version<>=version  (+flag -flag ?flag ?flag[+flag && -flag] ~flag)
-
-FlagSpec:
-+name
--name
-
-ConditionFlag:
-[FlagSpec]
+[condition]        name      versionspec              (depends)
+[+flag && -flag]  pkgname <>=version<>=version  (+flag -flag ?flag ?flag[+flag && -flag] ~flag)
 
 PkgName:
 all except "<>=("
@@ -34,26 +27,15 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/serenitylinux/libspack/flag"
-	"github.com/serenitylinux/libspack/flag/expr"
 	"github.com/serenitylinux/libspack/parser"
 )
 
 type Dep struct {
-	Condition *expr.ExprList
+	Condition *ExprList
 	Name      string
 	Version1  *Version
 	Version2  *Version
-	Flags     *flag.FlagList
-}
-
-func (d *Dep) UnmarshalJSON(data []byte) (err error) {
-	*d, err = Parse(string(data))
-	return err
-}
-
-func (d *Dep) MarshalJSON() ([]byte, error) {
-	return []byte(d.String()), nil
+	Flags     *FlagList
 }
 
 func (d *Dep) String() string {
@@ -114,7 +96,7 @@ func versionPeek(in *parser.Input) bool {
 	return s == ">" || s == "<" || s == "="
 }
 
-func Parse(s string) (Dep, error) {
+func ParseDep(s string) (Dep, error) {
 	s = strings.Replace(s, " ", "", -1)
 	in := parser.NewInput(s)
 	var d Dep
@@ -126,7 +108,7 @@ func (d *Dep) parse(in *parser.Input) error {
 	if conditionPeek(in) {
 		in.Next(1)
 
-		new, err := expr.ParseExprList(in)
+		new, err := parseExprList(in)
 		if err != nil {
 			return err
 		}
@@ -166,7 +148,7 @@ func (d *Dep) parse(in *parser.Input) error {
 		return nil
 	}
 
-	new := make(flag.FlagList, 0)
+	new := make(FlagList, 0)
 	err := parseFlagSet(&new, in)
 	if err != nil {
 		return err
@@ -180,13 +162,13 @@ func (d *Dep) parse(in *parser.Input) error {
 	return nil
 }
 
-func parseFlagSet(s *flag.FlagList, in *parser.Input) error {
+func parseFlagSet(s *FlagList, in *parser.Input) error {
 	if !in.IsNext("(") {
 		return errors.New("Expected '(' to start flag set")
 	}
 
 	for {
-		flag, err := flag.Parse(in)
+		flag, err := Parse(in)
 		if err != nil {
 			return err
 		}
@@ -194,9 +176,10 @@ func parseFlagSet(s *flag.FlagList, in *parser.Input) error {
 		//TODO maybe check if already exists
 		(*s)[flag.Name] = flag
 
-		str, _ := in.Next(1)
-		if str != "," {
+		str, _ := in.Peek(1)
+		if str != "+" && str != "-" && str != "~" && str != "?" {
 			//We are at the end
+			in.Next(1)
 
 			if str != ")" {
 				return errors.New("Invalid char '" + str + "', expected ')'")
@@ -229,7 +212,7 @@ func (v *Version) parse(in *parser.Input) error {
 
 type DepList []Dep
 
-func (list *DepList) EnabledFromFlags(fs flag.FlatFlagList) DepList {
+func (list *DepList) EnabledFromFlags(fs FlatFlagList) DepList {
 	res := make(DepList, 0)
 	for _, dep := range *list {
 		//We have no include condition

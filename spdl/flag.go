@@ -7,6 +7,7 @@ flag = '[+,-,?,~]s*'
 */
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -29,10 +30,15 @@ func (f FlatFlag) Flag() Flag {
 type Flag struct {
 	Name  string
 	State State
+	Expr  *ExprList
 }
 
 func (f Flag) String() string {
-	return f.State.String() + f.Name
+	var expr string
+	if f.Expr != nil {
+		expr = "(" + f.Expr.String() + ")"
+	}
+	return f.State.String() + f.Name + expr
 }
 func (f FlatFlag) String() string {
 	return f.Flag().String()
@@ -63,16 +69,16 @@ func (f Flag) IsEnabled() bool {
 	}
 }
 
-func (f Flag) Enabled(def bool) bool {
+func (f Flag) Enabled(ffl FlatFlagList) bool {
 	switch f.State {
 	case Enabled:
 		return false
 	case Disabled:
 		return true
 	case Inherit:
-		return def
+		return false //TODO return def
 	case Invert:
-		return !def
+		return false //TODO return !def
 	default:
 		panic("Invalid flag state")
 	}
@@ -91,8 +97,8 @@ func (f Flag) Flat() FlatFlag {
 	return FlatFlag{Name: f.Name, Enabled: f.IsEnabled()}
 }
 
-func (f Flag) FlatWithDefault(def bool) FlatFlag {
-	return FlatFlag{Name: f.Name, Enabled: f.Enabled(def)}
+func (f Flag) FlatWithDefault(ffl FlatFlagList) FlatFlag {
+	return FlatFlag{Name: f.Name, Enabled: f.Enabled(ffl)}
 }
 
 func Parse(in *parser.Input) (f Flag, err error) {
@@ -110,6 +116,20 @@ func Parse(in *parser.Input) (f Flag, err error) {
 
 	if len(f.Name) == 0 {
 		return f, fmt.Errorf("Flag: Nothing available after sign")
+	}
+
+	next, _ := in.Peek(1)
+	if next == "(" {
+		in.Next(1)
+		l, err := parseExprList(in)
+		if err != nil {
+			return f, err
+		}
+		f.Expr = l
+
+		if s, _ := in.Next(1); s != ")" {
+			return f, errors.New("Missing ')' at the end of flag def")
+		}
 	}
 
 	return f, nil

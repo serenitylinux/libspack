@@ -1,9 +1,6 @@
 package spdl
 
-import (
-	"fmt"
-	"strings"
-)
+import "strings"
 
 type FlagList map[string]Flag
 type FlatFlagList map[string]FlatFlag
@@ -64,7 +61,7 @@ func (l FlagList) Clone() FlagList {
 	newl := make(FlagList, len(l))
 
 	for i, flag := range l {
-		newl[i] = Flag{flag.Name, flag.State}
+		newl[i] = Flag{flag.Name, flag.State, flag.Expr}
 	}
 
 	return newl
@@ -73,15 +70,18 @@ func (l FlagList) Clone() FlagList {
 func (l FlagList) WithDefaults(defaults FlatFlagList) (FlatFlagList, error) {
 	newl := make(FlatFlagList)
 	for _, flag := range l {
+		newl[flag.Name] = flag.FlatWithDefault(defaults)
+		/* TODO MOVE
 		if flag.IsFlat() {
 			newl[flag.Name] = flag.Flat()
 		} else {
+
 			if def, ok := defaults[flag.Name]; ok {
 				newl[flag.Name] = flag.FlatWithDefault(def.Enabled)
 			} else {
 				return nil, fmt.Errorf("Default for flag %s not found", flag.Name)
 			}
-		}
+		}*/
 	}
 	return newl, nil
 }

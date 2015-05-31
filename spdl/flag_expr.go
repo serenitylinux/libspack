@@ -9,7 +9,7 @@ import (
 
 type FlagExpr struct {
 	Flag FlatFlag
-	list *exprlist
+	list *ExprList
 }
 
 func fromString(s string) (fs FlagExpr, err error) {
@@ -31,8 +31,8 @@ func fromString(s string) (fs FlagExpr, err error) {
 		return fs, errors.New("Missing '(' after flag")
 	}
 
-	var l *exprlist
-	l, err = parseexprlist(&in)
+	var l *ExprList
+	l, err = parseExprList(&in)
 	if err != nil {
 		return
 	}

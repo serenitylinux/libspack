@@ -73,3 +73,12 @@ func (fs *FlagExpr) UnmarshalJSON(data []byte) (err error) {
 func (fs *FlagExpr) MarshalJSON() ([]byte, error) {
 	return []byte(fs.String()), nil
 }
+
+func (d *Dep) UnmarshalJSON(data []byte) (err error) {
+	*d, err = ParseDep(string(data))
+	return err
+}
+
+func (d *Dep) MarshalJSON() ([]byte, error) {
+	return []byte(d.String()), nil
+}

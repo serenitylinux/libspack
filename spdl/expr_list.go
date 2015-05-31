@@ -6,14 +6,14 @@ import (
 
 // Linked list representing a flat flag expression
 
-type exprlist struct {
+type ExprList struct {
 	e    expr
 	op   *op
-	next *exprlist
+	next *ExprList
 }
 
-func parseexprlist(in *parser.Input) (*exprlist, error) {
-	list := new(exprlist)
+func parseExprList(in *parser.Input) (*ExprList, error) {
+	list := new(ExprList)
 
 	e, err := parseExpr(in)
 	if err != nil {
@@ -30,7 +30,7 @@ func parseexprlist(in *parser.Input) (*exprlist, error) {
 			return nil, err
 		}
 
-		nel, err := parseexprlist(in)
+		nel, err := parseExprList(in)
 		if err != nil {
 			return nil, err
 		}
@@ -40,7 +40,7 @@ func parseexprlist(in *parser.Input) (*exprlist, error) {
 	}
 	return list, nil
 }
-func (list *exprlist) Enabled(flist FlatFlagList) bool {
+func (list *ExprList) Enabled(flist FlatFlagList) bool {
 	if list == nil {
 		return true
 	}
@@ -53,7 +53,7 @@ func (list *exprlist) Enabled(flist FlatFlagList) bool {
 		return list.e.verify(flist) || list.next.Enabled(flist)
 	}
 }
-func (list *exprlist) String() string {
+func (list *ExprList) String() string {
 	if list == nil {
 		return ""
 	}

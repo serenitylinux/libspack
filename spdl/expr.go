@@ -6,8 +6,9 @@ import (
 	"github.com/serenitylinux/libspack/parser"
 )
 
+//Flag or list
 type expr struct {
-	list *exprlist
+	list *ExprList
 	flag FlatFlag
 }
 
@@ -16,7 +17,7 @@ func parseExpr(in *parser.Input) (*expr, error) {
 	if s, _ := in.Peek(1); s == "[" {
 		in.Next(1)
 
-		newl, err := parseexprlist(in)
+		newl, err := parseExprList(in)
 		if err != nil {
 			return nil, err
 		}
