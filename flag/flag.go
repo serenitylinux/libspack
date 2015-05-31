@@ -14,9 +14,6 @@ arg = '&&,||'
 sub = '[' + exprlist + ']'
 flag = '[+,-,?,~]s*'
 
-TODO type safe ambiguious structs
-ex: Flag and BasicFlag, FlagList and BasicFlagList
-
 */
 
 import (
@@ -68,9 +65,9 @@ func (f FlatFlag) ColorString() string {
 func (f Flag) IsEnabled() bool {
 	switch f.State {
 	case Enabled:
-		return false
-	case Disabled:
 		return true
+	case Disabled:
+		return false
 	default:
 		panic("Invalid flag state")
 	}
