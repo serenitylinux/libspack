@@ -1,9 +1,9 @@
 package spdl
 
-// FlagSetList represents a " " seperated list of flags
-type FlagSetList []FlagSet
+// Flagexprlist represents a " " seperated list of flags
+type Flagexprlist []FlagExpr
 
-func (fsl FlagSetList) String() string {
+func (fsl Flagexprlist) String() string {
 	res := ""
 	for _, fs := range fsl {
 		res += fs.String() + " "
@@ -12,7 +12,7 @@ func (fsl FlagSetList) String() string {
 }
 
 //Returns the Flags with default states
-func (fsl FlagSetList) Defaults() FlatFlagList {
+func (fsl Flagexprlist) Defaults() FlatFlagList {
 	res := make(FlatFlagList, 0)
 	for _, fs := range fsl {
 		res[fs.Flag.Name] = fs.Flag
@@ -20,7 +20,7 @@ func (fsl FlagSetList) Defaults() FlatFlagList {
 	return res
 }
 
-func (fsl FlagSetList) Contains(name string) bool {
+func (fsl Flagexprlist) Contains(name string) bool {
 	for _, fl := range fsl {
 		if fl.Flag.Name == name {
 			return true
@@ -29,7 +29,7 @@ func (fsl FlagSetList) Contains(name string) bool {
 	return false
 }
 
-func (fsl FlagSetList) Verify(list FlatFlagList) bool {
+func (fsl Flagexprlist) Verify(list FlatFlagList) bool {
 	for _, fs := range fsl {
 		if !fs.Verify(list) {
 			return false

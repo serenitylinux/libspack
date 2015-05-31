@@ -4,14 +4,16 @@ import (
 	"github.com/serenitylinux/libspack/parser"
 )
 
-type ExprList struct {
+// Linked list representing a flat flag expression
+
+type exprlist struct {
 	e    expr
 	op   *op
-	next *ExprList
+	next *exprlist
 }
 
-func ParseExprList(in *parser.Input) (*ExprList, error) {
-	list := new(ExprList)
+func parseexprlist(in *parser.Input) (*exprlist, error) {
+	list := new(exprlist)
 
 	e, err := parseExpr(in)
 	if err != nil {
@@ -28,7 +30,7 @@ func ParseExprList(in *parser.Input) (*ExprList, error) {
 			return nil, err
 		}
 
-		nel, err := ParseExprList(in)
+		nel, err := parseexprlist(in)
 		if err != nil {
 			return nil, err
 		}
@@ -38,7 +40,7 @@ func ParseExprList(in *parser.Input) (*ExprList, error) {
 	}
 	return list, nil
 }
-func (list *ExprList) Enabled(flist FlatFlagList) bool {
+func (list *exprlist) Enabled(flist FlatFlagList) bool {
 	if list == nil {
 		return true
 	}
@@ -51,7 +53,7 @@ func (list *ExprList) Enabled(flist FlatFlagList) bool {
 		return list.e.verify(flist) || list.next.Enabled(flist)
 	}
 }
-func (list *ExprList) String() string {
+func (list *exprlist) String() string {
 	if list == nil {
 		return ""
 	}

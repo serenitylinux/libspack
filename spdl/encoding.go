@@ -64,3 +64,12 @@ func (fl FlatFlagList) MarshalJSON() ([]byte, error) {
 	}
 	return json.Marshal(strs)
 }
+
+func (fs *FlagExpr) UnmarshalJSON(data []byte) (err error) {
+	*fs, err = fromString(string(data))
+	return err
+}
+
+func (fs *FlagExpr) MarshalJSON() ([]byte, error) {
+	return []byte(fs.String()), nil
+}
