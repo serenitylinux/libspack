@@ -7,8 +7,7 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/serenitylinux/libspack/dep"
-	"github.com/serenitylinux/libspack/flag/expr"
+	"github.com/serenitylinux/libspack/spdl"
 )
 
 type Control struct {
@@ -20,9 +19,9 @@ type Control struct {
 	Src         []string
 	Arch        []string
 
-	Bdeps dep.DepList
-	Deps  dep.DepList
-	Flags expr.FlagSetList
+	Bdeps spdl.DepList
+	Deps  spdl.DepList
+	Flags spdl.FlagExprList
 	//Provides (libjpeg, cc)
 	//Provides Hook (update mime types)
 }

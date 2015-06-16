@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/serenitylinux/libspack/control"
-	"github.com/serenitylinux/libspack/flag"
+	"github.com/serenitylinux/libspack/spdl"
 )
 
 type PkgInfo struct {
@@ -14,7 +14,7 @@ type PkgInfo struct {
 	Version    string
 	Iteration  int
 	BuildDate  time.Time
-	FlagStates flag.FlatFlagList
+	FlagStates spdl.FlatFlagList
 }
 
 type PkgInfoList []PkgInfo
@@ -48,16 +48,16 @@ func (p *PkgInfo) InstanceOf(c *control.Control) bool {
 	return c.Name == p.Name && p.Version == c.Version && c.Iteration == p.Iteration
 }
 
-func (p *PkgInfo) SetFlagState(f flag.FlatFlag) {
+func (p *PkgInfo) SetFlagState(f spdl.FlatFlag) {
 	p.FlagStates[f.Name] = f
 }
 
-func (p *PkgInfo) SetFlagStates(states []flag.FlatFlag) {
+func (p *PkgInfo) SetFlagStates(states []spdl.FlatFlag) {
 	for _, f := range states {
 		p.SetFlagState(f)
 	}
 }
 
-func (p *PkgInfo) Satisfies(flags flag.FlatFlagList) bool {
+func (p *PkgInfo) Satisfies(flags spdl.FlatFlagList) bool {
 	return flags.IsSubsetOf(p.FlagStates)
 }
