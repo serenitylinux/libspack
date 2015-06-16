@@ -3,15 +3,16 @@ package constraintconfig
 import (
 	"bufio"
 	"errors"
-	"github.com/cam72cam/go-lumberjack/log"
-	"github.com/serenitylinux/libspack/dep"
-	"github.com/serenitylinux/libspack/misc"
 	"io"
 	"os"
 	"path/filepath"
+
+	"github.com/cam72cam/go-lumberjack/log"
+	"github.com/serenitylinux/libspack/misc"
+	"github.com/serenitylinux/libspack/spdl"
 )
 
-type ConstraintList map[string]dep.Dep
+type ConstraintList map[string]spdl.Dep
 
 func (list ConstraintList) addFile(path string) error {
 	var interr error
@@ -23,7 +24,7 @@ func (list ConstraintList) addFile(path string) error {
 				continue
 			}
 
-			d, err := dep.Parse(line)
+			d, err := spdl.ParseDep(line)
 
 			if err != nil {
 				interr = err
