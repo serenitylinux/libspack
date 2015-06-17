@@ -1,6 +1,9 @@
 package spdl
 
-import "strings"
+import (
+	"fmt"
+	"strings"
+)
 
 type FlagList map[string]Flag
 type FlatFlagList map[string]FlatFlag
@@ -48,6 +51,19 @@ func (l FlatFlagList) IsSubsetOf(ol FlatFlagList) bool {
 		}
 	}
 	return true
+}
+
+func (l FlatFlagList) Merge(o FlatFlagList) error {
+	for _, of := range o {
+		if lf, ok := l[of.Name]; ok {
+			if lf.Enabled != of.Enabled {
+				return fmt.Errorf("Conflicting flags in merge %v", of.Name) //TODO better error
+			}
+		} else {
+			l[of.Name] = of
+		}
+	}
+	return nil
 }
 
 func (l FlatFlagList) IsEnabled(f string) bool {

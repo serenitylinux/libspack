@@ -11,6 +11,14 @@ import (
 
 import . "github.com/serenitylinux/libspack/misc"
 
+func (repo *Repo) GetAllNames() []string {
+	res := make([]string, 0, len(*repo.controls))
+	for name := range *repo.controls {
+		res = append(res, name)
+	}
+	return res
+}
+
 func (repo *Repo) GetAllControls() ControlMap {
 	return *repo.controls
 }

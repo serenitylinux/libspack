@@ -48,14 +48,21 @@ func (p *PkgInfo) InstanceOf(c *control.Control) bool {
 	return c.Name == p.Name && p.Version == c.Version && c.Iteration == p.Iteration
 }
 
-func (p *PkgInfo) SetFlagState(f spdl.FlatFlag) {
+func (p *PkgInfo) SetFlagState(f spdl.FlatFlag) error {
+	if _, ok := p.FlagStates[f.Name]; !ok {
+		return fmt.Errorf("Invalid flag %v for %v", f.Name, p.Name)
+	}
 	p.FlagStates[f.Name] = f
+	return nil
 }
 
-func (p *PkgInfo) SetFlagStates(states []spdl.FlatFlag) {
+func (p *PkgInfo) SetFlagStates(states spdl.FlatFlagList) error {
 	for _, f := range states {
-		p.SetFlagState(f)
+		if err := p.SetFlagState(f); err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
 func (p *PkgInfo) Satisfies(flags spdl.FlatFlagList) bool {
