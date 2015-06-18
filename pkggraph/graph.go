@@ -1,7 +1,9 @@
 package pkggraph
 
 import (
+	"crypto/md5"
 	"fmt"
+	"io"
 
 	"github.com/serenitylinux/libspack/repo"
 	"github.com/serenitylinux/libspack/spdl"
@@ -68,6 +70,9 @@ func (g Graph) Clone() *Graph {
 }
 
 func (g Graph) Hash() string {
-	//TODO
-	return "42"
+	h := md5.New()
+	for _, node := range g.nodes {
+		io.WriteString(h, node.Hash())
+	}
+	return fmt.Sprintf("%x", h.Sum(nil))
 }

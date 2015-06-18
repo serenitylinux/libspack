@@ -176,3 +176,7 @@ func (n *Node) InInstalled() bool {
 func (n *Node) HasBinary() bool {
 	return n.isBin
 }
+
+func (n *Node) Hash() string {
+	return fmt.Sprintf("%s::%s %v %d (%s)", n.Repo.Name, n.Name, n.changed, n.Type, n.rdeps.Hash(n.Graph))
+}

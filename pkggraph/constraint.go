@@ -115,3 +115,12 @@ func (c Constraints) AnyEnabled(g *Graph) bool {
 	}
 	return true
 }
+
+//TODO Do we want a list of dep.Dep or will flags suffice?
+func (c Constraints) Hash(g *Graph) string {
+	flags, err := c.Flags(g)
+	if err != nil {
+		panic(err)
+	}
+	return flags.String()
+}
