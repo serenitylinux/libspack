@@ -11,6 +11,63 @@ import (
 
 import . "github.com/serenitylinux/libspack/misc"
 
+func (repo *Repo) MapTemplatesByName(name string, fn func(control.Control)) {
+	for _, cs := range *repo.controls {
+		if len(cs) == 0 {
+			continue
+		}
+		if cs[0].Name != name {
+			continue
+		}
+		for _, c := range cs {
+			if ts, ok := (*repo.templateFiles)[c.Name]; ok {
+				if _, ok := ts[c.Version]; ok {
+					fn(c)
+				}
+			}
+		}
+	}
+
+}
+
+func (repo *Repo) MapAvailableByName(name string, fn func(control.Control, pkginfo.PkgInfo)) {
+	for _, ps := range *repo.fetchable {
+		if len(ps) == 0 {
+			continue
+		}
+		if ps[0].Name != name {
+			continue
+		}
+		for _, p := range ps {
+			if cs, ok := (*repo.controls)[p.Name]; ok {
+				for _, c := range cs {
+					if c.Version == p.Version {
+						fn(c, p)
+						break
+					}
+				}
+			} else {
+				panic("info without template")
+			}
+		}
+	}
+}
+
+func (repo *Repo) MapInstalledByName(root, name string, fn func(p PkgInstallSet)) error {
+	list, err := repo.pkgsInstalledInRoot(root)
+	if err != nil {
+		return err
+	}
+	for _, pkg := range *list {
+		if pkg.Control.Name == name {
+			fn(pkg)
+		}
+	}
+	return nil
+}
+
+//TODO === refactor below this line ====
+
 func (repo *Repo) GetAllNames() []string {
 	res := make([]string, 0, len(*repo.controls))
 	for name := range *repo.controls {

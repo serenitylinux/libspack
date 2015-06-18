@@ -32,7 +32,7 @@ func LoadRepos() error {
 
 	for _, f := range files {
 		fAbs := reposDir + f.Name()
-		r, err := repo.FromFile(fAbs)
+		r, err := repo.Load(fAbs)
 		if err != nil {
 			return err
 		}

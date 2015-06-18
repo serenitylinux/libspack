@@ -47,7 +47,7 @@ func (c Constraints) Clone() Constraints {
 }
 
 func (c Constraints) Map(g *Graph, fn func(Constraint, spdl.FlatFlagList) error) error {
-	for val := range c {
+	for _, val := range c {
 		var parentFlags spdl.FlatFlagList //Will be empty if no parent
 
 		if val.parent != nil {
@@ -73,10 +73,8 @@ func (c Constraints) Map(g *Graph, fn func(Constraint, spdl.FlatFlagList) error)
 	return nil
 }
 
-func (c Constraints) Flags(g *Graph) (spdl.FlatFlagList, error) {
-	var total spdl.FlatFlagList
-
-	err := c.Map(g, func(val Constraint, parentFlags spdl.FlatFlagList) error {
+func (c Constraints) Flags(g *Graph) (total spdl.FlatFlagList, err error) {
+	err = c.Map(g, func(val Constraint, parentFlags spdl.FlatFlagList) error {
 		flags, err := val.value.Flags.WithDefaults(parentFlags)
 		if err != nil {
 			return err
@@ -86,30 +84,17 @@ func (c Constraints) Flags(g *Graph) (spdl.FlatFlagList, error) {
 	return total, err
 }
 
-type VersionChecker func(string) bool
-
-func (c Constraints) VersionChecker(g *Graph) (VersionChecker, error) {
-	versions := make([]*spdl.Version, 0)
-
-	err := c.Map(g, func(val Constraint, parentFlags spdl.FlatFlagList) error {
+func (c Constraints) Versions(g *Graph) (versions []spdl.Version, err error) {
+	err = c.Map(g, func(val Constraint, parentFlags spdl.FlatFlagList) error {
 		if val.value.Version1 != nil {
-			versions = append(versions, val.value.Version1)
+			versions = append(versions, *val.value.Version1)
 		}
 		if val.value.Version2 != nil {
-			versions = append(versions, val.value.Version2)
+			versions = append(versions, *val.value.Version2)
 		}
 		return nil
 	})
-
-	return func(str string) bool {
-		for _, v := range versions {
-			if !v.Accepts(str) {
-				return false
-			}
-		}
-
-		return true
-	}, nil
+	return versions, err
 }
 
 func (c Constraints) AnyEnabled(g *Graph) bool {

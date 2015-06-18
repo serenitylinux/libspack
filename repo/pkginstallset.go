@@ -19,13 +19,12 @@ func NewPkgIS(c *control.Control, p *pkginfo.PkgInfo, hash hash.HashList) *PkgIn
 func (p *PkgInstallSet) ToFile(filename string) error {
 	return json.EncodeFile(filename, p)
 }
-func PkgISFromFile(filename string) (p *PkgInstallSet, err error) {
+func PkgISFromFile(filename string) (*PkgInstallSet, error) {
 	var i PkgInstallSet
-	err = json.DecodeFile(filename, &i)
-	if err == nil {
-		p = &i
+	if err := json.DecodeFile(filename, &i); err != nil {
+		return nil, err
 	}
-	return
+	return &i, nil
 }
 
 func (repo *Repo) installSetFile(p pkginfo.PkgInfo, basedir string) string {

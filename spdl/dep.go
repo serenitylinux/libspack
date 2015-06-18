@@ -63,6 +63,10 @@ type Version struct {
 	ver string
 }
 
+func NewVersion(typ int, ver string) *Version {
+	return &Version{typ, ver}
+}
+
 func (v *Version) String() string {
 	s := ""
 	if v == nil {
