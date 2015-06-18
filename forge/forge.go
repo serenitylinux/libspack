@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"github.com/cam72cam/go-lumberjack/log"
 	"github.com/serenitylinux/libspack/control"
-	"github.com/serenitylinux/libspack/flag"
 	"github.com/serenitylinux/libspack/helpers/git"
 	"github.com/serenitylinux/libspack/helpers/http"
 	"github.com/serenitylinux/libspack/pkginfo"
 	"github.com/serenitylinux/libspack/spakg"
+	"github.com/serenitylinux/libspack/spdl"
 	"io"
 	"io/ioutil"
 	"os"
@@ -103,7 +103,7 @@ func FetchPkgSrc(urls []string, basedir string, srcdir string) error {
 	return nil
 }
 
-func runPart(part, fileName, action, src_dir string, states []flag.Flag) error {
+func runPart(part, fileName, action, src_dir string, states spdl.FlatFlagList) error {
 	forge_helper := `
 		function none {
 			return 0
@@ -153,7 +153,7 @@ func runPart(part, fileName, action, src_dir string, states []flag.Flag) error {
 	return nil
 }
 
-func runParts(template, src_dir, dest_dir string, test bool, states []flag.Flag) error {
+func runParts(template, src_dir, dest_dir string, test bool, states spdl.FlatFlagList) error {
 	type action struct {
 		part string
 		args string
@@ -275,7 +275,7 @@ func addFsToSpakg(basedir, destdir, outfile string, archive spakg.Spakg) error {
 	return nil
 }
 
-func BuildPackage(template string, c *control.Control, destdir, basedir, outfile string, states []flag.Flag) error {
+func BuildPackage(template string, c *control.Control, destdir, basedir, outfile string, states spdl.FlatFlagList) error {
 	Header("Building package")
 
 	//Md5Sums
@@ -316,7 +316,7 @@ func BuildPackage(template string, c *control.Control, destdir, basedir, outfile
 	return nil
 }
 
-func Forge(template, outfile string, states []flag.Flag, test bool, interactive bool) error {
+func Forge(template, outfile string, states spdl.FlatFlagList, test bool, interactive bool) error {
 	c, err := control.FromTemplateFile(template)
 	if err != nil {
 		return err
@@ -360,7 +360,7 @@ func Forge(template, outfile string, states []flag.Flag, test bool, interactive 
 		return OnError(err)
 	}
 
-	err = BuildPackage(template, c, dest_dir, basedir, outfile, states)
+	err = BuildPackage(template, &c, dest_dir, basedir, outfile, states)
 	if err != nil {
 		return OnError(err)
 	}
