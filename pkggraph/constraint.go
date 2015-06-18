@@ -46,39 +46,44 @@ func (c Constraints) Clone() Constraints {
 	return nc
 }
 
-func (c Constraints) Flags(g *Graph) (spdl.FlatFlagList, error) {
-	var total spdl.FlatFlagList
-
-	for _, val := range c {
+func (c Constraints) Map(g *Graph, fn func(Constraint, spdl.FlatFlagList) error) error {
+	for val := range c {
 		var parentFlags spdl.FlatFlagList //Will be empty if no parent
 
 		if val.parent != nil {
 			if parent, ok := g.nodes[*val.parent]; ok {
 				parentFlags = parent.Pkginfo().FlagStates
 			} else {
-				return nil, fmt.Errorf("Invalid parent %v", *val.parent)
+				return fmt.Errorf("Invalid parent %v", *val.parent)
 			}
 		}
 
 		if val.value.Condition != nil {
 			if val.parent == nil {
-				return nil, fmt.Errorf("Can't have a condition without a parent") //TODO better error
+				return fmt.Errorf("Can't have a condition without a parent") //TODO better error
 			}
 			if !val.value.Condition.Enabled(parentFlags) {
-				continue //Skip
+				continue //Skip, not enabled
 			}
 		}
+		if err := fn(val, parentFlags); err != nil {
+			return err
+		}
+	}
+	return nil
+}
 
+func (c Constraints) Flags(g *Graph) (spdl.FlatFlagList, error) {
+	var total spdl.FlatFlagList
+
+	err := c.Map(g, func(val Constraint, parentFlags spdl.FlatFlagList) error {
 		flags, err := val.value.Flags.WithDefaults(parentFlags)
 		if err != nil {
-			return nil, err
+			return err
 		}
-		if err := total.Merge(flags); err != nil {
-			return nil, err
-		}
-
-	}
-	return total, nil
+		return total.Merge(flags)
+	})
+	return total, err
 }
 
 type VersionChecker func(string) bool
@@ -86,33 +91,15 @@ type VersionChecker func(string) bool
 func (c Constraints) VersionChecker(g *Graph) (VersionChecker, error) {
 	versions := make([]*spdl.Version, 0)
 
-	for _, val := range c {
-		var parentFlags spdl.FlatFlagList //Will be empty if no parent
-
-		if val.parent != nil {
-			if parent, ok := g.nodes[*val.parent]; ok {
-				parentFlags = parent.Pkginfo().FlagStates
-			} else {
-				return nil, fmt.Errorf("Invalid parent %v", *val.parent)
-			}
-		}
-
-		if val.value.Condition != nil {
-			if val.parent == nil {
-				return nil, fmt.Errorf("Can't have a condition without a parent") //TODO better error
-			}
-			if !val.value.Condition.Enabled(parentFlags) {
-				continue //Skip
-			}
-		}
-
+	err := c.Map(g, func(val Constraint, parentFlags spdl.FlatFlagList) error {
 		if val.value.Version1 != nil {
 			versions = append(versions, val.value.Version1)
 		}
 		if val.value.Version2 != nil {
 			versions = append(versions, val.value.Version2)
 		}
-	}
+		return nil
+	})
 
 	return func(str string) bool {
 		for _, v := range versions {
