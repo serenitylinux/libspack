@@ -151,6 +151,12 @@ func (n *Node) RemoveParentConstraint(parent string) error {
 	}
 	return nil
 }
+func (n *Node) SetInstallType(typ InstallType) error {
+	if n.Type < typ {
+		return n.change()
+	}
+	return nil
+}
 
 func (n *Node) Control() control.Control {
 	return *n.control

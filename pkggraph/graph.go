@@ -43,12 +43,14 @@ func NewGraph(root string, repos ...*repo.Repo) (*Graph, error) {
 	return g, nil
 }
 
-func (g *Graph) EnablePackage(dep spdl.Dep) bool {
-	curr, ok := g.nodes[dep.Name]
-	if ok {
-		curr.AddConstraint(dep)
+func (g *Graph) EnablePackage(dep spdl.Dep, typ InstallType) error {
+	if curr, ok := g.nodes[dep.Name]; ok {
+		if err := curr.SetInstallType(typ); err != nil {
+			return err
+		}
+		return curr.AddConstraint(dep)
 	}
-	return ok
+	return fmt.Errorf("Unable to find package %v", dep.Name)
 }
 
 func (g Graph) Clone() *Graph {
