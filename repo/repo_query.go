@@ -11,7 +11,7 @@ import (
 
 import . "github.com/serenitylinux/libspack/misc"
 
-func (repo *Repo) MapTemplatesByName(name string, fn func(control.Control)) {
+func (repo *Repo) MapTemplatesByName(name string, fn func(string, control.Control)) {
 	for _, cs := range *repo.controls {
 		if len(cs) == 0 {
 			continue
@@ -21,8 +21,8 @@ func (repo *Repo) MapTemplatesByName(name string, fn func(control.Control)) {
 		}
 		for _, c := range cs {
 			if ts, ok := (*repo.templateFiles)[c.Name]; ok {
-				if _, ok := ts[c.Version]; ok {
-					fn(c)
+				if t, ok := ts[c.Version]; ok {
+					fn(t, c)
 				}
 			}
 		}

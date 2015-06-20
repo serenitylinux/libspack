@@ -118,7 +118,7 @@ func (n *Node) change() error {
 		fallthrough
 	//latest src if available
 	case InstallLatestSrc:
-		n.Repo.MapTemplatesByName(n.Name, func(c control.Control) {
+		n.Repo.MapTemplatesByName(n.Name, func(_ string, c control.Control) {
 			if matchControl(c) {
 				n.control = &c
 			}
