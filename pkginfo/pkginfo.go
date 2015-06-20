@@ -19,10 +19,10 @@ type PkgInfo struct {
 
 type PkgInfoList []PkgInfo
 
-func (p *PkgInfo) String() string {
+func (p PkgInfo) String() string {
 	return fmt.Sprintf("%s-%s_%d_%x", p.Name, p.Version, p.Iteration, p.flagHash())
 }
-func (p *PkgInfo) PrettyString() string {
+func (p PkgInfo) PrettyString() string {
 	return fmt.Sprintf("%s %s_%d (%s)", p.Name, p.Version, p.Iteration, p.FlagStates)
 }
 
@@ -42,6 +42,15 @@ func FromControl(c *control.Control) *PkgInfo {
 		Iteration:  c.Iteration,
 	}
 	return &p
+}
+
+func (p PkgInfo) ToDep() spdl.Dep {
+	flags := p.FlagStates.ToFlagList()
+	return spdl.Dep{
+		Name:     p.Name,
+		Version1: spdl.NewVersion(spdl.EQ, p.Version),
+		Flags:    &flags,
+	}
 }
 
 func (p *PkgInfo) InstanceOf(c *control.Control) bool {

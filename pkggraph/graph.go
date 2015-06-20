@@ -55,9 +55,23 @@ func (g *Graph) EnablePackage(dep spdl.Dep, typ InstallType) error {
 	return fmt.Errorf("Unable to find package %v", dep.Name)
 }
 
+func (g *Graph) EnableInstalled() error {
+	//TODO
+	return nil
+}
+
 func (g *Graph) Find(name string) (*Node, bool) {
 	node, ok := g.nodes[name]
 	return node, ok
+}
+
+func (g *Graph) ToWield() []*Node {
+	//TODO
+	return nil
+}
+func (g *Graph) ToForge() []*Node {
+	//TODO
+	return nil
 }
 
 func (g Graph) Clone() *Graph {

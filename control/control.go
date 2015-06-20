@@ -26,8 +26,12 @@ type Control struct {
 	//Provides Hook (update mime types)
 }
 
-func (c *Control) String() string {
+func (c Control) String() string {
 	return fmt.Sprintf("%s-%s_%d", c.Name, c.Version, c.Iteration)
+}
+func (c Control) Equals(other Control) bool {
+	//TODO better comparison?
+	return c.String() == other.String()
 }
 
 func FromTemplateFile(template string) (c Control, err error) {

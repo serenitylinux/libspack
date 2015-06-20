@@ -1,6 +1,7 @@
 package repo
 
 import (
+	"fmt"
 	"io/ioutil"
 	"strconv"
 
@@ -56,6 +57,17 @@ func RefreshRepos(notRemote bool) {
 
 func GetAllRepos() RepoList {
 	return repos
+}
+
+func GetRepoFor(pkgname string) (*Repo, error) {
+	for _, repo := range repos {
+		for _, name := range repo.GetAllNames() {
+			if name == pkgname {
+				return repo, nil
+			}
+		}
+	}
+	return nil, fmt.Errorf("Unable to find repo for %v", pkgname)
 }
 
 func GetPackageAllVersions(pkgname string) ([]control.Control, *Repo) {

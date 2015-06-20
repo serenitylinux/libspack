@@ -94,3 +94,11 @@ func (l FlagList) WithDefaults(defaults FlatFlagList) (FlatFlagList, error) {
 	}
 	return newl, nil
 }
+
+func (l FlatFlagList) ToFlagList() FlagList {
+	newl := make(FlagList)
+	for _, flat := range l {
+		newl[flat.Name] = flat.Flag()
+	}
+	return newl
+}
