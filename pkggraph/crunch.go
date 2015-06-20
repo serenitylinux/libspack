@@ -30,12 +30,12 @@ func (g *Graph) crunch(iters Iterations) error {
 		defer func() { indent-- }()
 		prefix := strings.Repeat("\t", indent)
 		debug := func(s string) {
-			log.Debug.Format(prefix + node.Name + ":" + s)
+			log.Debug.Format(prefix + node.Pkginfo().String() + ":" + s)
 		}
 
 		//Has not changed since last iteration
 		if !node.Changed() {
-			debug("Not changed")
+			//debug("Not changed")
 			return nil
 		}
 
@@ -61,7 +61,7 @@ func (g *Graph) crunch(iters Iterations) error {
 			//Already hit during this iteration
 			//This is as deep as we go
 			if changed {
-				debug("Already hit")
+				debug(fmt.Sprintf("Already hit %v", dep.Name))
 				continue
 			}
 
@@ -84,6 +84,7 @@ func (g *Graph) crunch(iters Iterations) error {
 	log.Debug.Format("Pruning nodes")
 	for _, node := range g.nodes {
 		if node.Changed() {
+			node.changed = false
 			log.Debug.Format("Pruning %v", node.Name)
 			//Prune
 			for _, n := range g.nodes {
