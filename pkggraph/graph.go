@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/serenitylinux/libspack/repo"
+	"github.com/serenitylinux/libspack"
 	"github.com/serenitylinux/libspack/spdl"
 )
 
@@ -24,7 +24,7 @@ type Graph struct {
 	nodes   map[string]*Node
 }
 
-func NewGraph(root string, repos ...*repo.Repo) (*Graph, error) {
+func NewGraph(root string, repos libspack.RepoList) (*Graph, error) {
 	g := &Graph{
 		root:    root,
 		ordered: make([]*Node, 0, 100),
@@ -53,6 +53,11 @@ func (g *Graph) EnablePackage(dep spdl.Dep, typ InstallType) error {
 		return curr.AddConstraint(dep)
 	}
 	return fmt.Errorf("Unable to find package %v", dep.Name)
+}
+
+func (g *Graph) Find(name string) (*Node, bool) {
+	node, ok := g.nodes[name]
+	return node, ok
 }
 
 func (g Graph) Clone() *Graph {
