@@ -75,11 +75,14 @@ func (c Constraints) Map(g *Graph, fn func(Constraint, spdl.FlatFlagList) error)
 
 func (c Constraints) Flags(g *Graph) (total spdl.FlatFlagList, err error) {
 	err = c.Map(g, func(val Constraint, parentFlags spdl.FlatFlagList) error {
-		flags, err := val.value.Flags.WithDefaults(parentFlags)
-		if err != nil {
-			return err
+		if val.value.Flags != nil {
+			flags, err := val.value.Flags.WithDefaults(parentFlags)
+			if err != nil {
+				return err
+			}
+			return total.Merge(flags)
 		}
-		return total.Merge(flags)
+		return nil
 	})
 	return total, err
 }
