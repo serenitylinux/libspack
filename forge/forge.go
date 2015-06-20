@@ -22,7 +22,6 @@ import (
 	"time"
 )
 
-import . "github.com/serenitylinux/libspack"
 import . "github.com/serenitylinux/libspack/misc"
 import . "github.com/serenitylinux/libspack/hash"
 

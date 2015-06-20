@@ -10,10 +10,10 @@ import (
 
 	"github.com/cam72cam/go-lumberjack/log"
 	"github.com/serenitylinux/libspack/hash"
+	"github.com/serenitylinux/libspack/repo"
 	"github.com/serenitylinux/libspack/spakg"
 )
 import . "github.com/serenitylinux/libspack/misc"
-import . "github.com/serenitylinux/libspack"
 
 func Wield(file string, destdir string) error {
 	spkg, err := spakg.FromFile(file, nil)
@@ -232,7 +232,7 @@ func ExtractCheckCopy(pkgfile string, destdir string) error {
 		return err
 	}
 
-	if prev, _ := GetPackageInstalledByName(pkg.Control.Name, destdir); prev != nil {
+	if prev, _ := repo.GetPackageInstalledByName(pkg.Control.Name, destdir); prev != nil {
 		log.Debug.Format("Removing files from old version %s", prev.PkgInfo.PrettyString())
 		//TODO remove empty leftover dirs
 		for oldf, _ := range prev.Hashes {

@@ -3,7 +3,7 @@ package misc
 import (
 	"bufio"
 	"bytes"
-	"github.com/cam72cam/go-lumberjack/color"
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -11,6 +11,9 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+
+	"github.com/cam72cam/go-lumberjack/color"
+	"github.com/cam72cam/go-lumberjack/log"
 )
 
 func GetWidth() int {
@@ -145,6 +148,45 @@ func RunCommand(cmd *exec.Cmd, stdout io.Writer, stderr io.Writer) error {
 	cmd.Stderr = stderr
 
 	return cmd.Run()
+}
+
+func Header(str string) {
+	log.Info.Print(str + ": ")
+	log.Debug.Println()
+	LogBar(log.Debug, color.Brown)
+}
+func HeaderFormat(str string, extra ...interface{}) {
+	Header(fmt.Sprintf(str, extra...))
+}
+
+func PrintSuccess() {
+	log.Info.Println(color.Green.String("Success"))
+	log.Debug.Println()
+}
+
+func AskYesNo(question string, def bool) bool {
+	yn := "[Y/n]"
+	if !def {
+		yn = "[y/N]"
+	}
+	fmt.Printf("%s: %s ", question, yn)
+
+	var answer string
+	fmt.Scanf("%s", &answer)
+
+	yesRgx := regexp.MustCompile("(y|Y|yes|Yes)")
+	noRgx := regexp.MustCompile("(n|N|no|No)")
+	switch {
+	case answer == "":
+		return def
+	case yesRgx.MatchString(answer):
+		return true
+	case noRgx.MatchString(answer):
+		return false
+	default:
+		fmt.Println("Please enter Y or N")
+		return AskYesNo(question, def)
+	}
 }
 
 var GitRegex = regexp.MustCompile(".*\\.git")

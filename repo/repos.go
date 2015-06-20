@@ -1,21 +1,19 @@
-package libspack
+package repo
 
 import (
-	"fmt"
+	"io/ioutil"
+	"strconv"
+
 	"github.com/cam72cam/go-lumberjack/color"
 	"github.com/cam72cam/go-lumberjack/log"
 	"github.com/serenitylinux/libspack/control"
 	"github.com/serenitylinux/libspack/misc"
 	"github.com/serenitylinux/libspack/pkginfo"
-	"github.com/serenitylinux/libspack/repo"
-	"io/ioutil"
-	"regexp"
-	"strconv"
 )
 
 const reposDir = "/etc/spack/repos/"
 
-type RepoList map[string]*repo.Repo
+type RepoList map[string]*Repo
 
 var repos RepoList
 
@@ -32,7 +30,7 @@ func LoadRepos() error {
 
 	for _, f := range files {
 		fAbs := reposDir + f.Name()
-		r, err := repo.Load(fAbs)
+		r, err := Load(fAbs)
 		if err != nil {
 			return err
 		}
@@ -52,7 +50,7 @@ func RefreshRepos(notRemote bool) {
 		} else {
 			repo.RefreshRemote()
 		}
-		PrintSuccess()
+		misc.PrintSuccess()
 	}
 }
 
@@ -60,7 +58,7 @@ func GetAllRepos() RepoList {
 	return repos
 }
 
-func GetPackageAllVersions(pkgname string) ([]control.Control, *repo.Repo) {
+func GetPackageAllVersions(pkgname string) ([]control.Control, *Repo) {
 	for _, repo := range repos {
 		cl, exists := repo.GetControls(pkgname)
 		if exists {
@@ -70,7 +68,7 @@ func GetPackageAllVersions(pkgname string) ([]control.Control, *repo.Repo) {
 	return nil, nil
 }
 
-func GetPackageVersionIteration(pkgname, version, iteration string) (*control.Control, *repo.Repo) {
+func GetPackageVersionIteration(pkgname, version, iteration string) (*control.Control, *Repo) {
 	pkgs, repo := GetPackageAllVersions(pkgname)
 	itri, e := strconv.Atoi(iteration)
 	if e != nil {
@@ -92,7 +90,7 @@ func GetPackageVersionIteration(pkgname, version, iteration string) (*control.Co
 		return ctrl, repo
 	}
 }
-func GetPackageVersion(pkgname, version string) (*control.Control, *repo.Repo) {
+func GetPackageVersion(pkgname, version string) (*control.Control, *Repo) {
 	pkgs, repo := GetPackageAllVersions(pkgname)
 	var ctrl *control.Control
 	for _, ver := range pkgs {
@@ -108,7 +106,7 @@ func GetPackageVersion(pkgname, version string) (*control.Control, *repo.Repo) {
 		return ctrl, repo
 	}
 }
-func GetPackageLatest(pkgname string) (*control.Control, *repo.Repo) {
+func GetPackageLatest(pkgname string) (*control.Control, *Repo) {
 	for _, repo := range repos {
 		c, exists := repo.GetLatestControl(pkgname)
 		if exists {
@@ -117,7 +115,7 @@ func GetPackageLatest(pkgname string) (*control.Control, *repo.Repo) {
 	}
 	return nil, nil
 }
-func GetPackageInstalledByName(pkgname string, destdir string) (*repo.PkgInstallSet, *repo.Repo) {
+func GetPackageInstalledByName(pkgname string, destdir string) (*PkgInstallSet, *Repo) {
 	for _, repo := range repos {
 		c := repo.GetInstalledByName(pkgname, destdir)
 		if c != nil {
@@ -126,56 +124,17 @@ func GetPackageInstalledByName(pkgname string, destdir string) (*repo.PkgInstall
 	}
 	return nil, nil
 }
-func UninstallList(p *pkginfo.PkgInfo) []repo.PkgInstallSet {
-	res := make([]repo.PkgInstallSet, 0)
+func UninstallList(p *pkginfo.PkgInfo) []PkgInstallSet {
+	res := make([]PkgInstallSet, 0)
 	for _, repo := range repos {
 		res = append(res, repo.UninstallList(p)...)
 	}
 	return res
 }
-func RdepList(p *pkginfo.PkgInfo) []repo.PkgInstallSet {
-	res := make([]repo.PkgInstallSet, 0)
+func RdepList(p *pkginfo.PkgInfo) []PkgInstallSet {
+	res := make([]PkgInstallSet, 0)
 	for _, repo := range repos {
 		res = append(res, repo.RdepList(p)...)
 	}
 	return res
-}
-
-func Header(str string) {
-	log.Info.Print(str + ": ")
-	log.Debug.Println()
-	misc.LogBar(log.Debug, color.Brown)
-}
-func HeaderFormat(str string, extra ...interface{}) {
-	Header(fmt.Sprintf(str, extra...))
-}
-
-func PrintSuccess() {
-	log.Info.Println(color.Green.String("Success"))
-	log.Debug.Println()
-}
-
-func AskYesNo(question string, def bool) bool {
-	yn := "[Y/n]"
-	if !def {
-		yn = "[y/N]"
-	}
-	fmt.Printf("%s: %s ", question, yn)
-
-	var answer string
-	fmt.Scanf("%s", &answer)
-
-	yesRgx := regexp.MustCompile("(y|Y|yes|Yes)")
-	noRgx := regexp.MustCompile("(n|N|no|No)")
-	switch {
-	case answer == "":
-		return def
-	case yesRgx.MatchString(answer):
-		return true
-	case noRgx.MatchString(answer):
-		return false
-	default:
-		fmt.Println("Please enter Y or N")
-		return AskYesNo(question, def)
-	}
 }

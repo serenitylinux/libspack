@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/serenitylinux/libspack"
+	"github.com/serenitylinux/libspack/repo"
 	"github.com/serenitylinux/libspack/spdl"
 )
 
@@ -24,7 +24,7 @@ type Graph struct {
 	nodes   map[string]*Node
 }
 
-func NewGraph(root string, repos libspack.RepoList) (*Graph, error) {
+func NewGraph(root string, repos repo.RepoList) (*Graph, error) {
 	g := &Graph{
 		root:    root,
 		ordered: make([]*Node, 0, 100),
