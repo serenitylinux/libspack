@@ -30,7 +30,7 @@ func (g *Graph) crunch(iters Iterations) error {
 		defer func() { indent-- }()
 		prefix := strings.Repeat("\t", indent)
 		debug := func(s string) {
-			log.Debug.Format(prefix + node.Pkginfo().String() + ":" + s)
+			log.Debug.Format(prefix + node.Pkginfo().PrettyString() + ":" + s)
 		}
 
 		//Has not changed since last iteration

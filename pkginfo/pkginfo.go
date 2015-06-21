@@ -23,7 +23,7 @@ func (p PkgInfo) String() string {
 	return fmt.Sprintf("%s-%s_%d_%x", p.Name, p.Version, p.Iteration, p.flagHash())
 }
 func (p PkgInfo) PrettyString() string {
-	return fmt.Sprintf("%s %s_%d (%s)", p.Name, p.Version, p.Iteration, p.FlagStates)
+	return fmt.Sprintf("%s %s_%d (%s)", p.Name, p.Version, p.Iteration, p.FlagStates.ColorString())
 }
 
 func (p *PkgInfo) flagHash() uint32 {

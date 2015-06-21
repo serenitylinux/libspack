@@ -80,7 +80,7 @@ func buildGraphs(pkgs []spdl.Dep, isForge bool, root string, ignoreBDeps bool, r
 		if done, ok := added[key]; ok && done {
 			return nil //Already done
 		} else if ok && !done {
-			return fmt.Errorf("Can not forge %v, it requires itself (%v) to build", pkg.Name, key)
+			return fmt.Errorf("Can not forge %v, it requires itself (%v) to build", pkg.Name, info.Pkginfo.PrettyString())
 		}
 
 		added[key] = false
