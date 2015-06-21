@@ -129,7 +129,7 @@ func (repo *Repo) updateControlsFromTemplates() {
 		c, err := control.FromTemplateFile(file)
 
 		if err != nil {
-			log.Warn.Format("Invalid template in repo %s (%s) : %s", repo.Name, file, err)
+			log.Warn.Format("Invalid template in repo %s (%s) : %s", repo.Name, file, err.Error())
 			return
 		}
 
@@ -166,7 +166,7 @@ func (repo *Repo) updateControlsFromRemote() {
 		var c control.Control
 		err := json.DecodeFile(file, &c)
 		if err != nil {
-			log.Warn.Format("Invalid control %s in repo %s", file, repo.Name)
+			log.Warn.Format("Invalid control %s in repo %s: %v", file, repo.Name, err.Error())
 			return
 		}
 
@@ -193,10 +193,10 @@ func (repo *Repo) updatePkgInfosFromRemote() {
 
 	readFunc := func(file string) {
 		var pki pkginfo.PkgInfo
-		err := json.DecodeFile(file, pki)
+		err := json.DecodeFile(file, &pki)
 
 		if err != nil {
-			log.Warn.Format("Invalid pkginfo %s in repo %s", file, repo.Name)
+			log.Warn.Format("Invalid pkginfo %s in repo %s: %v", file, repo.Name, err.Error())
 			return
 		}
 
