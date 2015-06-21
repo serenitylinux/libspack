@@ -21,7 +21,7 @@ func (repo *Repo) MapTemplatesByName(name string, fn func(string, control.Contro
 		}
 		for _, c := range cs {
 			if ts, ok := (*repo.templateFiles)[c.Name]; ok {
-				if t, ok := ts[c.Version]; ok {
+				if t, ok := ts[c.String()]; ok {
 					fn(t, c)
 				}
 			}
