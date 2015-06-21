@@ -101,6 +101,9 @@ func (c Constraints) Versions(g *Graph) (versions []spdl.Version, err error) {
 }
 
 func (c Constraints) AnyEnabled(g *Graph) bool {
+	if len(c) == 0 {
+		return false
+	}
 	for _, val := range c {
 		if val.value.Condition == nil {
 			continue //OK
