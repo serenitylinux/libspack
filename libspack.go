@@ -43,6 +43,7 @@ func buildGraphs(pkgs []spdl.Dep, isForge bool, root string, ignoreBDeps bool, r
 	forgeOrder := make([]string, 0)
 
 	addToForge = func(pkg spdl.Dep) error {
+		log.Info.Format("Forge %v", pkg.String())
 		info := &forgeInfo{
 			Graph: graph.Clone(),
 		}
@@ -57,6 +58,10 @@ func buildGraphs(pkgs []spdl.Dep, isForge bool, root string, ignoreBDeps bool, r
 				info.Template = t
 			}
 		})
+
+		if info.Control == nil {
+			return fmt.Errorf("Unable to find package %v", pkg.Name)
+		}
 
 		flags, err := pkg.Flags.WithDefaults(nil)
 		if err != nil {
@@ -85,9 +90,12 @@ func buildGraphs(pkgs []spdl.Dep, isForge bool, root string, ignoreBDeps bool, r
 			if bdep.Condition != nil && !bdep.Condition.Enabled(info.Pkginfo.FlagStates) {
 				continue //Not enabled
 			}
-			defaults, err := bdep.Flags.WithDefaults(info.Pkginfo.FlagStates)
-			if err != nil {
-				return err
+			defaults := make(spdl.FlatFlagList)
+			if bdep.Flags != nil {
+				defaults, err = bdep.Flags.WithDefaults(info.Pkginfo.FlagStates)
+				if err != nil {
+					return err
+				}
 			}
 
 			flags := defaults.ToFlagList()
@@ -122,6 +130,7 @@ func buildGraphs(pkgs []spdl.Dep, isForge bool, root string, ignoreBDeps bool, r
 
 	addToWield = func(pkgs []spdl.Dep, g *pkggraph.Graph, itype pkggraph.InstallType) error {
 		for _, dep := range pkgs {
+			log.Info.Format("Wield %v", dep.String())
 			err := g.EnablePackage(dep, itype)
 			if err != nil {
 				return err
@@ -135,7 +144,7 @@ func buildGraphs(pkgs []spdl.Dep, isForge bool, root string, ignoreBDeps bool, r
 		for _, node := range g.ToForge() {
 			err := addToForge(node.Pkginfo().ToDep())
 			if err != nil {
-				return nil
+				return err
 			}
 		}
 		return nil

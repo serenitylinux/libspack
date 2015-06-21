@@ -74,6 +74,7 @@ func (c Constraints) Map(g *Graph, fn func(Constraint, spdl.FlatFlagList) error)
 }
 
 func (c Constraints) Flags(g *Graph) (total spdl.FlatFlagList, err error) {
+	total = make(spdl.FlatFlagList)
 	err = c.Map(g, func(val Constraint, parentFlags spdl.FlatFlagList) error {
 		if val.value.Flags != nil {
 			flags, err := val.value.Flags.WithDefaults(parentFlags)
