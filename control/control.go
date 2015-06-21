@@ -37,7 +37,7 @@ func (c Control) Equals(other Control) bool {
 func FromTemplateFile(template string) (c Control, err error) {
 	commands := `
 template=` + template + `
-default=$(basedir $template)/default
+default=$(dirname $template)/default
 
 . $template
 if [ -f "$default" ]; then
@@ -71,7 +71,7 @@ cat << EOT
   "Deps": [ $depsval ],
   "Arch": [ $archval ],
   "Flags": [ $flagsval ]
-},
+}
 EOT`
 	var buf bytes.Buffer
 	cmd := exec.Command("bash", "-ec", commands)
