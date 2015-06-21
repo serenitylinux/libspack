@@ -170,7 +170,7 @@ func (n *Node) IsEnabled() bool {
 	return n.rdeps.AnyEnabled(n.Graph)
 }
 
-func (n *Node) InInstalled() bool {
+func (n *Node) IsInstalled() bool {
 	return n.isInstalled
 }
 func (n *Node) HasBinary() bool {

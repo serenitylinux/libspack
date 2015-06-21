@@ -66,12 +66,22 @@ func (g *Graph) Find(name string) (*Node, bool) {
 }
 
 func (g *Graph) ToWield() []*Node {
-	//TODO
-	return nil
+	wield := make([]*Node, 0)
+	for _, node := range g.nodes {
+		if node.IsEnabled() && node.HasBinary() && !node.IsInstalled() {
+			wield = append(wield, node)
+		}
+	}
+	return wield
 }
 func (g *Graph) ToForge() []*Node {
-	//TODO
-	return nil
+	wield := make([]*Node, 0)
+	for _, node := range g.nodes {
+		if node.IsEnabled() && !node.HasBinary() {
+			wield = append(wield, node)
+		}
+	}
+	return wield
 }
 
 func (g Graph) Clone() *Graph {
