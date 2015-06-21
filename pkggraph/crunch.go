@@ -30,6 +30,9 @@ func (g *Graph) crunch(iters Iterations) error {
 		defer func() { indent-- }()
 		prefix := strings.Repeat("\t", indent)
 		debug := func(s string) {
+			if node.pkginfo == nil {
+				log.Debug.Format("%v is broken", node.Name)
+			}
 			log.Debug.Format(prefix + node.Pkginfo().PrettyString() + ":" + s)
 		}
 
@@ -84,8 +87,10 @@ func (g *Graph) crunch(iters Iterations) error {
 	log.Debug.Format("Pruning nodes")
 	for _, node := range g.nodes {
 		if node.Changed() {
-			node.changed = false
-			log.Debug.Format("Pruning %v", node.Name)
+			if err := node.ApplyChanges(); err != nil {
+				return err
+			}
+			log.Debug.Format("Pruning node %v", node.Name)
 			//Prune
 			for _, n := range g.nodes {
 				n.RemoveParentConstraint(node.Name)

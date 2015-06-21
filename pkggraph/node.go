@@ -54,7 +54,17 @@ func (n *Node) Changed() bool {
 }
 
 func (n *Node) change() error {
+	if n.changed == false {
+		err := n.ApplyChanges()
+		n.changed = true
+		return err
+	}
 	n.changed = true
+	return nil
+}
+
+func (n *Node) ApplyChanges() error {
+	n.changed = false
 	n.control = nil
 	n.pkginfo = nil
 	n.isInstalled = false
@@ -90,6 +100,7 @@ func (n *Node) change() error {
 					n.control = p.Control
 					n.pkginfo = p.PkgInfo
 					n.isInstalled = true
+					n.isBin = true
 				}
 			}
 		})

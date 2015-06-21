@@ -4,13 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/cam72cam/go-lumberjack/log"
-	"github.com/serenitylinux/libspack/control"
-	"github.com/serenitylinux/libspack/helpers/git"
-	"github.com/serenitylinux/libspack/helpers/http"
-	"github.com/serenitylinux/libspack/pkginfo"
-	"github.com/serenitylinux/libspack/spakg"
-	"github.com/serenitylinux/libspack/spdl"
 	"io"
 	"io/ioutil"
 	"os"
@@ -20,6 +13,14 @@ import (
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/cam72cam/go-lumberjack/log"
+	"github.com/serenitylinux/libspack/control"
+	"github.com/serenitylinux/libspack/helpers/git"
+	"github.com/serenitylinux/libspack/helpers/http"
+	"github.com/serenitylinux/libspack/pkginfo"
+	"github.com/serenitylinux/libspack/spakg"
+	"github.com/serenitylinux/libspack/spdl"
 )
 
 import . "github.com/serenitylinux/libspack/misc"
@@ -102,8 +103,22 @@ func FetchPkgSrc(urls []string, basedir string, srcdir string) error {
 	return nil
 }
 
-func runPart(part, fileName, action, src_dir string, states spdl.FlatFlagList) error {
+func envString(env map[string]string) string {
+	var parts []string
+	for k, v := range env {
+		parts = append(parts, fmt.Sprintf("export %v=%v", k, v))
+	}
+	return strings.Join(parts, "\n")
+}
+
+func runPart(part, fileName, action, src_dir, root string, states spdl.FlatFlagList, env map[string]string) error {
 	forge_helper := `
+		%[7]s
+
+		if ! [ -d /dev/ ]; then
+			mkdir /dev;
+		fi
+
 		function none {
 			return 0
 		}
@@ -138,11 +153,21 @@ func runPart(part, fileName, action, src_dir string, states spdl.FlatFlagList) e
 		flagstuff += fmt.Sprintf("flag_%s=%t \n", fl.Name, fl.Enabled)
 	}
 
-	forge_helper = fmt.Sprintf(forge_helper, part, fileName, action, filepath.Dir(fileName)+"/default", src_dir, flagstuff)
+	forge_helper = fmt.Sprintf(forge_helper, part, fileName, action, filepath.Dir(fileName)+"/default", src_dir, flagstuff, envString(env))
 
 	Header("Running " + part)
 
-	err := RunCommand(exec.Command("bash", "-ce", forge_helper), log.Debug, os.Stderr)
+	bash := exec.Command("bash", "-ce", forge_helper)
+	if filepath.Clean(root) != "/" {
+		if _, err := exec.LookPath("chroot"); err == nil {
+			bash.Args = append([]string{root}, bash.Args...)
+			bash = exec.Command("chroot", bash.Args...)
+		} else if _, err := exec.LookPath("systemd-nspawn"); err == nil {
+			bash.Args = append([]string{"-D", root}, bash.Args...)
+			bash = exec.Command("systemd-nspawn", bash.Args...)
+		}
+	}
+	err := RunCommand(bash, log.Debug, os.Stderr)
 	if err != nil {
 		return err
 	}
@@ -152,7 +177,7 @@ func runPart(part, fileName, action, src_dir string, states spdl.FlatFlagList) e
 	return nil
 }
 
-func runParts(template, src_dir, dest_dir string, test bool, states spdl.FlatFlagList) error {
+func runParts(template, src_dir, dest_dir, root string, test bool, states spdl.FlatFlagList) error {
 	type action struct {
 		part string
 		args string
@@ -166,13 +191,15 @@ func runParts(template, src_dir, dest_dir string, test bool, states spdl.FlatFla
 		action{"installpkg", "make DESTDIR=${dest_dir} install", true},
 	}
 
-	os.Setenv("MAKEFLAGS", "-j6")
-	os.Setenv("dest_dir", dest_dir)
-	os.Setenv("FORCE_UNSAFE_CONFIGURE", "1") //TODO probably shouldn't do this
+	env := map[string]string{
+		"MAKEFLAGS":              "-j6",
+		"dest_dir":               dest_dir,
+		"FORCE_UNSAFE_CONFIGURE": "1", //TODO probably shouldn't do this
+	}
 
 	for _, part := range parts {
 		if part.do {
-			err := runPart(part.part, template, part.args, src_dir, states)
+			err := runPart(part.part, template, part.args, src_dir, root, states, env)
 			if err != nil {
 				return err
 			}
@@ -315,14 +342,21 @@ func BuildPackage(template string, c *control.Control, destdir, basedir, outfile
 	return nil
 }
 
-func Forge(template, outfile string, states spdl.FlatFlagList, test bool, interactive bool) error {
+func Forge(template, outfile, root string, states spdl.FlatFlagList, test bool, interactive bool) error {
 	c, err := control.FromTemplateFile(template)
 	if err != nil {
 		return err
 	}
 
-	basedir, _ := ioutil.TempDir(os.TempDir(), "forge")
+	basedir, _ := ioutil.TempDir(root, "forge")
 	defer os.RemoveAll(basedir)
+
+	cmd := exec.Command("cp", template, basedir)
+	err = cmd.Run()
+	if err != nil {
+		return err
+	}
+	template = basedir + "/" + filepath.Base(template)
 
 	dest_dir := basedir + "/dest/"
 	src_dir := basedir + "/src/"
@@ -349,7 +383,7 @@ func Forge(template, outfile string, states spdl.FlatFlagList, test bool, intera
 		return OnError(err)
 	}
 
-	err = runParts(template, src_dir, dest_dir, test, states)
+	err = runParts(template, src_dir, dest_dir, root, test, states)
 	if err != nil {
 		return OnError(err)
 	}

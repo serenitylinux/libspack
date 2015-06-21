@@ -45,9 +45,16 @@ func NewGraph(root string, repos repo.RepoList) (*Graph, error) {
 	return g, nil
 }
 
+func (g *Graph) ChangeRoot(root string) {
+	g.root = root
+}
+
 func (g *Graph) EnablePackage(dep spdl.Dep, typ InstallType) error {
 	if curr, ok := g.nodes[dep.Name]; ok {
 		if err := curr.SetInstallType(typ); err != nil {
+			return err
+		}
+		if err := curr.ApplyChanges(); err != nil {
 			return err
 		}
 		return curr.AddConstraint(dep)

@@ -2,14 +2,20 @@ package libspack
 
 import (
 	"fmt"
+	"io/ioutil"
+	"os"
 
 	"github.com/cam72cam/go-lumberjack/color"
 	"github.com/cam72cam/go-lumberjack/log"
 	"github.com/serenitylinux/libspack/control"
+	"github.com/serenitylinux/libspack/forge"
+	"github.com/serenitylinux/libspack/misc"
 	"github.com/serenitylinux/libspack/pkggraph"
 	"github.com/serenitylinux/libspack/pkginfo"
 	"github.com/serenitylinux/libspack/repo"
+	"github.com/serenitylinux/libspack/spakg"
 	"github.com/serenitylinux/libspack/spdl"
+	"github.com/serenitylinux/libspack/wield"
 )
 
 //TODO: reinstall
@@ -24,9 +30,12 @@ func Wield(pkgs []spdl.Dep, root string, reinstall bool, itype pkggraph.InstallT
 
 func buildGraphs(pkgs []spdl.Dep, isForge bool, root string, ignoreBDeps bool, reinstall bool, itype pkggraph.InstallType) error {
 	type forgeInfo struct {
-		Graph    *pkggraph.Graph
+		Graph *pkggraph.Graph
+		Root  string
+
 		Pkginfo  *pkginfo.PkgInfo
 		Control  *control.Control
+		Repo     *repo.Repo
 		Template string
 	}
 
@@ -41,18 +50,27 @@ func buildGraphs(pkgs []spdl.Dep, isForge bool, root string, ignoreBDeps bool, r
 	toForge := make(map[string]*forgeInfo, 0)
 	added := make(map[string]bool)
 	forgeOrder := make([]string, 0)
+	toRemove := make([]string, 0)
 
-	addToForge = func(pkg spdl.Dep) error {
+	addToForge = func(pkg spdl.Dep) (err error) {
 		log.Info.Format("Forge %v", pkg.String())
 		info := &forgeInfo{
 			Graph: graph.Clone(),
 		}
-
-		r, err := repo.GetRepoFor(pkg.Name)
+		info.Root, err = ioutil.TempDir(root+os.TempDir(), "forge")
 		if err != nil {
 			return err
 		}
-		r.MapTemplatesByName(pkg.Name, func(t string, c control.Control) {
+		info.Root += "/"
+		toRemove = append(toRemove, info.Root)
+		log.Debug.Format("Root: %v", info.Root)
+		info.Graph.ChangeRoot(info.Root)
+
+		info.Repo, err = repo.GetRepoFor(pkg.Name)
+		if err != nil {
+			return err
+		}
+		info.Repo.MapTemplatesByName(pkg.Name, func(t string, c control.Control) {
 			if info.Control == nil || spdl.NewVersion(spdl.GT, info.Control.Version).Accepts(c.Version) {
 				info.Control = &c
 				info.Template = t
@@ -116,6 +134,10 @@ func buildGraphs(pkgs []spdl.Dep, isForge bool, root string, ignoreBDeps bool, r
 			}
 		}
 
+		if err := addToWield([]spdl.Dep{{Name: "base-files"}, {Name: "base"}}, info.Graph, pkggraph.InstallConvenient); err != nil {
+			return err
+		}
+
 		added[key] = true
 		forgeOrder = append(forgeOrder, key)
 		toForge[key] = info
@@ -172,22 +194,120 @@ func buildGraphs(pkgs []spdl.Dep, isForge bool, root string, ignoreBDeps bool, r
 		}
 	}
 
-	fmt.Println(color.White.String("Packages to Forge:"))
-	for _, info := range toForge {
-		fmt.Println(info.Pkginfo.PrettyString())
-		fmt.Println(color.White.String("Packages to Wield for %v:", info.Pkginfo.Name))
-		for _, pkg := range info.Graph.ToWield() {
-			fmt.Println("\t" + pkg.Pkginfo().String())
+	if len(toForge) != 0 {
+		fmt.Println(color.White.String("Packages to Forge:"))
+		for _, info := range toForge {
+			fmt.Println(info.Pkginfo.PrettyString())
+			if len(info.Graph.ToWield()) != 0 {
+				fmt.Println(color.White.String("Packages to Wield for ", info.Pkginfo.PrettyString()))
+				for _, pkg := range info.Graph.ToWield() {
+					fmt.Println("\t" + pkg.Pkginfo().String())
+				}
+			}
+		}
+	}
+
+	if len(toWield.ToWield()) != 0 {
+		fmt.Println(color.White.String("Packages to Wield:"))
+		for _, pkg := range toWield.ToWield() {
+			fmt.Println(pkg.Pkginfo().String())
+		}
+	}
+
+	if len(toWield.ToWield()) == 0 && len(toForge) == 0 {
+		log.Info.Println("Nothing to do")
+		return nil
+	}
+
+	if !misc.AskYesNo("Do you wish to continue?", true) {
+		return nil
+	}
+
+	//TODO interactive mode
+	isInteractive := false
+	if len(toForge) != 0 {
+		for _, info := range toForge {
+			log.Info.Format("Installing bdeps for %s", info.Pkginfo.PrettyString())
+
+			if len(info.Graph.ToWield()) != 0 {
+				if err := wieldGraph(info.Graph.ToWield(), info.Root); err != nil {
+					return err
+				}
+			}
+
+			log.Info.Format("Forging %s", info.Pkginfo.PrettyString())
+			spakgFile := info.Repo.GetSpakgOutput(info.Pkginfo)
+			err = forge.Forge(info.Template, spakgFile, info.Root, info.Pkginfo.FlagStates, false, isInteractive)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	if len(toWield.ToWield()) != 0 {
+		err := wieldGraph(toWield.ToWield(), root)
+		if err != nil {
+			return err
+		}
+	}
+
+	misc.PrintSuccess()
+
+	return nil
+}
+
+func wieldGraph(nodes []*pkggraph.Node, root string) error {
+	type pkgset struct {
+		spkg *spakg.Spakg
+		repo *repo.Repo
+		file string
+	}
+	spkgs := make([]pkgset, 0)
+
+	//Fetch Packages
+	for _, pkg := range nodes {
+		pkginfo := pkg.Pkginfo()
+		err := pkg.Repo.FetchIfNotCachedSpakg(&pkginfo)
+		if err != nil {
+			return err
 		}
 
+		pkgfile := pkg.Repo.GetSpakgOutput(&pkginfo)
+		spkg, err := spakg.FromFile(pkgfile, nil)
+		if err != nil {
+			return err
+		}
+
+		spkgs = append(spkgs, pkgset{spkg, pkg.Repo, pkgfile})
+	}
+	log.Info.Println()
+
+	//Preinstall
+	for _, pkg := range spkgs {
+		wield.PreInstall(pkg.spkg, root)
+	}
+	log.Debug.Println()
+
+	//Install
+	for _, pkg := range spkgs {
+		err := wield.ExtractCheckCopy(pkg.file, root)
+
+		if err != nil {
+			return err
+		}
+
+		pkg.repo.InstallSpakg(pkg.spkg, root)
+	}
+	log.Debug.Println()
+	if len(spkgs) != 0 {
+		wield.Ldconfig(root)
 	}
 
-	fmt.Println(color.White.String("Packages to Wield:"))
-	for _, pkg := range toWield.ToWield() {
-		fmt.Println(pkg.Pkginfo().String())
+	//PostInstall
+	for _, pkg := range spkgs {
+		wield.PostInstall(pkg.spkg, root)
 	}
-
-	//TODO actually perform stuff
+	log.Info.Println()
 
 	return nil
 }

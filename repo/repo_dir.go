@@ -1,7 +1,6 @@
 package repo
 
 import (
-	"errors"
 	"io/ioutil"
 	"net/url"
 	"os"
@@ -102,7 +101,8 @@ func cloneRepo(remote string, dir string, name string) {
 
 func readAll(dir string, regex *regexp.Regexp, todo func(file string)) error {
 	if !PathExists(dir) {
-		return errors.New("Unable to access directory")
+		//TODO return errors.New("Unable to access directory")
+		return nil
 	}
 
 	filelist, err := ioutil.ReadDir(dir)
