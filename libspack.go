@@ -63,9 +63,12 @@ func buildGraphs(pkgs []spdl.Dep, isForge bool, root string, ignoreBDeps bool, r
 			return fmt.Errorf("Unable to find package %v", pkg.Name)
 		}
 
-		flags, err := pkg.Flags.WithDefaults(nil)
-		if err != nil {
-			return err
+		var flags spdl.FlatFlagList
+		if pkg.Flags != nil {
+			flags, err = pkg.Flags.WithDefaults(nil)
+			if err != nil {
+				return err
+			}
 		}
 
 		info.Pkginfo = pkginfo.FromControl(info.Control)
@@ -85,30 +88,32 @@ func buildGraphs(pkgs []spdl.Dep, isForge bool, root string, ignoreBDeps bool, r
 
 		added[key] = false
 
-		bdeps := make([]spdl.Dep, 0)
-		for _, bdep := range info.Control.Bdeps {
-			if bdep.Condition != nil && !bdep.Condition.Enabled(info.Pkginfo.FlagStates) {
-				continue //Not enabled
-			}
-			defaults := make(spdl.FlatFlagList)
-			if bdep.Flags != nil {
-				defaults, err = bdep.Flags.WithDefaults(info.Pkginfo.FlagStates)
-				if err != nil {
-					return err
+		if !ignoreBDeps {
+			bdeps := make([]spdl.Dep, 0)
+			for _, bdep := range info.Control.Bdeps {
+				if bdep.Condition != nil && !bdep.Condition.Enabled(info.Pkginfo.FlagStates) {
+					continue //Not enabled
 				}
+				defaults := make(spdl.FlatFlagList)
+				if bdep.Flags != nil {
+					defaults, err = bdep.Flags.WithDefaults(info.Pkginfo.FlagStates)
+					if err != nil {
+						return err
+					}
+				}
+
+				flags := defaults.ToFlagList()
+				bdeps = append(bdeps, spdl.Dep{
+					Name:     bdep.Name,
+					Version1: bdep.Version1,
+					Version2: bdep.Version2,
+					Flags:    &flags,
+				})
 			}
 
-			flags := defaults.ToFlagList()
-			bdeps = append(bdeps, spdl.Dep{
-				Name:     bdep.Name,
-				Version1: bdep.Version1,
-				Version2: bdep.Version2,
-				Flags:    &flags,
-			})
-		}
-
-		if err := addToWield(bdeps, info.Graph, pkggraph.InstallConvenient); err != nil {
-			return err
+			if err := addToWield(bdeps, info.Graph, pkggraph.InstallConvenient); err != nil {
+				return err
+			}
 		}
 
 		added[key] = true
