@@ -14,6 +14,8 @@ func (g *Graph) Crunch() error {
 	return g.crunch(iters)
 }
 
+var prefix string
+
 func (g *Graph) crunch(iters Iterations) error {
 	//Save current graph
 	hash := g.Hash()
@@ -28,27 +30,36 @@ func (g *Graph) crunch(iters Iterations) error {
 	handle = func(node *Node) error {
 		indent++
 		defer func() { indent-- }()
-		prefix := strings.Repeat("\t", indent)
+		prefix = strings.Repeat("\t", indent)
 		debug := func(s string) {
 			if node.pkginfo == nil {
-				log.Debug.Format("%v is broken", node.Name)
+				log.Debug.Format(prefix + node.Name + ":" + s)
+			} else {
+				log.Debug.Format(prefix + node.Pkginfo().PrettyString() + ":" + s)
 			}
-			log.Debug.Format(prefix + node.Pkginfo().PrettyString() + ":" + s)
-		}
-
-		//Has not changed since last iteration
-		if !node.Changed() {
-			//debug("Not changed")
-			return nil
 		}
 
 		if !node.IsEnabled() {
-			debug("Not needed")
+			log.Debug.Format(prefix + node.Name + ":" + "Not Needed")
+			return nil
+		}
+
+		if node.inPath == true {
+			debug("Already visited")
 			return nil
 		}
 
 		debug("Start")
 		defer debug("Done")
+
+		if node.control == nil { //initial setup
+			if err := node.ApplyChanges(); err != nil {
+				return err
+			}
+		}
+
+		node.inPath = true
+		defer func() { node.inPath = false }()
 
 		for _, dep := range node.Control().Deps {
 			depnode, ok := g.nodes[dep.Name]
@@ -57,16 +68,7 @@ func (g *Graph) crunch(iters Iterations) error {
 				return fmt.Errorf("Dependency %v not found", dep.Name)
 			}
 
-			changed := depnode.Changed()
-
 			depnode.AddParentConstraint(node.Name, dep)
-
-			//Already hit during this iteration
-			//This is as deep as we go
-			if changed {
-				debug(fmt.Sprintf("Already hit %v", dep.Name))
-				continue
-			}
 
 			if err := handle(depnode); err != nil {
 				return err
@@ -77,7 +79,7 @@ func (g *Graph) crunch(iters Iterations) error {
 
 	//handle all
 	log.Debug.Format("Handling nodes")
-	for _, node := range g.nodes {
+	for _, node := range g.ordered {
 		if err := handle(node); err != nil {
 			return err
 		}
@@ -86,13 +88,13 @@ func (g *Graph) crunch(iters Iterations) error {
 	//prune changed nodes
 	log.Debug.Format("Pruning nodes")
 	for _, node := range g.nodes {
-		if node.Changed() {
+		if node.hasNewConstraints {
+			log.Debug.Format("Pruning node %v", node.Name)
 			if err := node.ApplyChanges(); err != nil {
 				return err
 			}
-			log.Debug.Format("Pruning node %v", node.Name)
 			//Prune
-			for _, n := range g.nodes {
+			for _, n := range g.ordered {
 				n.RemoveParentConstraint(node.Name)
 			}
 
@@ -105,7 +107,7 @@ func (g *Graph) crunch(iters Iterations) error {
 	//check done or iterate again
 	isDone := true
 	for _, node := range g.nodes {
-		if node.Changed() {
+		if node.hasNewConstraints {
 			isDone = false
 			break
 		}
@@ -113,7 +115,12 @@ func (g *Graph) crunch(iters Iterations) error {
 
 	//Here we go again!
 	if !isDone {
-		log.Debug.Format("Iterating again!")
+		str := ""
+		for _, pkg := range g.ToWield() {
+			str += pkg.Pkginfo().String() + " "
+		}
+		log.Debug.Format("ToWIeld:" + str)
+		log.Debug.Format("=======Iterating again!========")
 		return g.crunch(iters)
 	}
 

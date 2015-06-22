@@ -3,6 +3,7 @@ package pkggraph
 import (
 	"fmt"
 
+	"github.com/cam72cam/go-lumberjack/log"
 	"github.com/serenitylinux/libspack/control"
 	"github.com/serenitylinux/libspack/pkginfo"
 	"github.com/serenitylinux/libspack/repo"
@@ -17,7 +18,9 @@ type Node struct {
 
 	rdeps Constraints
 
-	changed bool
+	isEnabled         bool
+	inPath            bool
+	hasNewConstraints bool
 
 	control     *control.Control
 	pkginfo     *pkginfo.PkgInfo
@@ -42,33 +45,31 @@ func (n Node) Clone(newgraph *Graph) *Node {
 
 		rdeps: n.rdeps.Clone(),
 
-		changed: n.changed,
+		isEnabled:         n.isEnabled,
+		hasNewConstraints: n.hasNewConstraints,
 
-		control: n.control,
-		pkginfo: n.pkginfo,
+		control:     n.control,
+		pkginfo:     n.pkginfo,
+		isInstalled: n.isInstalled,
+		isBin:       n.isBin,
 	}
-}
-
-func (n *Node) Changed() bool {
-	return n.changed
-}
-
-func (n *Node) change() error {
-	if n.changed == false {
-		err := n.ApplyChanges()
-		n.changed = true
-		return err
-	}
-	n.changed = true
-	return nil
 }
 
 func (n *Node) ApplyChanges() error {
-	n.changed = false
-	n.control = nil
-	n.pkginfo = nil
+	n.hasNewConstraints = false
 	n.isInstalled = false
 	n.isBin = false
+	n.isEnabled = false
+
+	log.Debug.Format(prefix+"Finding new version of %v", n.Name)
+
+	var newControl *control.Control
+	var newPkginfo *pkginfo.PkgInfo
+	defer func() {
+		n.control = newControl
+		n.pkginfo = newPkginfo
+		n.isEnabled = true
+	}()
 
 	versions, err := n.rdeps.Versions(n.Graph)
 	if err != nil {
@@ -87,7 +88,7 @@ func (n *Node) ApplyChanges() error {
 			}
 		}
 		//Check is latest
-		return n.control == nil || spdl.NewVersion(spdl.GT, n.control.Version).Accepts(c.Version)
+		return newControl == nil || spdl.NewVersion(spdl.GT, newControl.Version).Accepts(c.Version)
 	}
 
 	switch n.Type {
@@ -97,8 +98,8 @@ func (n *Node) ApplyChanges() error {
 			if matchControl(*p.Control) {
 				//Check satisfies flags
 				if flags.IsSubsetOf(p.PkgInfo.FlagStates) {
-					n.control = p.Control
-					n.pkginfo = p.PkgInfo
+					newControl = p.Control
+					newPkginfo = p.PkgInfo
 					n.isInstalled = true
 					n.isBin = true
 				}
@@ -107,7 +108,7 @@ func (n *Node) ApplyChanges() error {
 		if err != nil {
 			return err
 		}
-		if n.pkginfo != nil {
+		if newPkginfo != nil {
 			return nil
 		}
 		fallthrough
@@ -117,13 +118,13 @@ func (n *Node) ApplyChanges() error {
 			if matchControl(c) {
 				//Check satisfies flags
 				if flags.IsSubsetOf(p.FlagStates) {
-					n.control = &c
-					n.pkginfo = &p
+					newControl = &c
+					newPkginfo = &p
 					n.isBin = true
 				}
 			}
 		})
-		if n.pkginfo != nil {
+		if newPkginfo != nil {
 			return nil
 		}
 		fallthrough
@@ -131,12 +132,12 @@ func (n *Node) ApplyChanges() error {
 	case InstallLatestSrc:
 		n.Repo.MapTemplatesByName(n.Name, func(_ string, c control.Control) {
 			if matchControl(c) {
-				n.control = &c
+				newControl = &c
 			}
 		})
-		if n.control != nil {
-			n.pkginfo = pkginfo.FromControl(n.control)
-			return n.pkginfo.SetFlagStates(flags)
+		if newControl != nil {
+			newPkginfo = pkginfo.FromControl(newControl)
+			return newPkginfo.SetFlagStates(flags)
 		}
 		fallthrough
 	default:
@@ -147,24 +148,36 @@ func (n *Node) ApplyChanges() error {
 
 func (n *Node) AddConstraint(dep spdl.Dep) error {
 	n.rdeps.Add(Constraint{value: dep})
-	return n.change()
+	n.hasNewConstraints = true
+	return nil
 }
 func (n *Node) AddParentConstraint(parent string, dep spdl.Dep) error {
+	//TODO GLIBC HACK
+	if n.Name == parent {
+		return nil
+	}
+
 	if !n.rdeps.HasParent(parent) {
+		log.Debug.Format(prefix+"Adding parent constraint %v by %v", dep.String(), parent)
 		n.rdeps.Add(Constraint{parent: &parent, value: dep})
-		return n.change()
+		n.hasNewConstraints = true
 	}
 	return nil
 }
 func (n *Node) RemoveParentConstraint(parent string) error {
+	//TODO GLIBC HACK
+	if n.Name == parent {
+		return nil
+	}
+
 	if n.rdeps.RemoveParent(parent) {
-		return n.change()
+		n.hasNewConstraints = true
 	}
 	return nil
 }
 func (n *Node) SetInstallType(typ InstallType) error {
 	if n.Type < typ {
-		return n.change()
+		return n.ApplyChanges()
 	}
 	return nil
 }
@@ -189,5 +202,5 @@ func (n *Node) HasBinary() bool {
 }
 
 func (n *Node) Hash() string {
-	return fmt.Sprintf("%s::%s %v %d (%s)", n.Repo.Name, n.Name, n.changed, n.Type, n.rdeps.Hash(n.Graph))
+	return fmt.Sprintf("%s::%s %v %v %d (%s)", n.Repo.Name, n.Name, n.hasNewConstraints, n.isEnabled, n.Type, n.rdeps.Hash(n.Graph))
 }
