@@ -201,7 +201,7 @@ func buildGraphs(pkgs []spdl.Dep, isForge bool, root string, ignoreBDeps bool, r
 			if len(info.Graph.ToWield()) != 0 {
 				fmt.Println(color.White.String("Packages to Wield for ", info.Pkginfo.PrettyString()))
 				for _, pkg := range info.Graph.ToWield() {
-					fmt.Println("\t" + pkg.Pkginfo().String())
+					fmt.Println("\t" + pkg.Pkginfo().PrettyString())
 				}
 			}
 		}
@@ -210,7 +210,7 @@ func buildGraphs(pkgs []spdl.Dep, isForge bool, root string, ignoreBDeps bool, r
 	if len(toWield.ToWield()) != 0 {
 		fmt.Println(color.White.String("Packages to Wield:"))
 		for _, pkg := range toWield.ToWield() {
-			fmt.Println(pkg.Pkginfo().String())
+			fmt.Println(pkg.Pkginfo().PrettyString())
 		}
 	}
 
