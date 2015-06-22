@@ -2,11 +2,14 @@ package repo
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/serenitylinux/libspack/control"
 	"github.com/serenitylinux/libspack/pkginfo"
+	"github.com/serenitylinux/libspack/spakg"
 )
 
 import . "github.com/serenitylinux/libspack/misc"
@@ -30,7 +33,7 @@ func (repo *Repo) MapTemplatesByName(name string, fn func(string, control.Contro
 
 }
 
-func (repo *Repo) MapAvailableByName(name string, fn func(control.Control, pkginfo.PkgInfo)) {
+func (repo *Repo) MapAvailableByName(name string, fn func(control.Control, pkginfo.PkgInfo)) error {
 	for _, ps := range *repo.fetchable {
 		if len(ps) == 0 {
 			continue
@@ -47,10 +50,48 @@ func (repo *Repo) MapAvailableByName(name string, fn func(control.Control, pkgin
 					}
 				}
 			} else {
-				panic("info without template")
+				panic("info without control")
 			}
 		}
 	}
+	for _, cs := range *repo.controls {
+		if len(cs) == 0 {
+			continue
+		}
+		if cs[0].Name != name {
+			continue
+		}
+		for _, c := range cs {
+			dir := "/var/cache/spack/spakg/" + repo.Name
+			if !PathExists(dir) {
+				//TODO return errors.New("Unable to access directory")
+				return nil
+			}
+
+			filelist, err := ioutil.ReadDir(dir)
+			if err != nil {
+				return err
+			}
+
+			for _, file := range filelist {
+				if strings.HasPrefix(file.Name(), c.String()) {
+					tmpDir, _ := ioutil.TempDir(os.TempDir(), "wield")
+					defer os.RemoveAll(tmpDir)
+
+					pkg, err := spakg.FromFile(dir+"/"+file.Name(), &tmpDir)
+					if err != nil {
+						return err
+					}
+					if c.String() == pkg.Control.String() {
+						fn(c, pkg.Pkginfo)
+					} else {
+						println("WALUWALUWALU")
+					}
+				}
+			}
+		}
+	}
+	return nil
 }
 
 func (repo *Repo) MapInstalledByName(root, name string, fn func(p PkgInstallSet)) error {
