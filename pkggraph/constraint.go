@@ -3,6 +3,7 @@ package pkggraph
 import (
 	"fmt"
 
+	"github.com/cam72cam/go-lumberjack/log"
 	"github.com/serenitylinux/libspack/spdl"
 )
 
@@ -31,6 +32,7 @@ func (c Constraints) HasParent(parent string) bool {
 func (c *Constraints) RemoveParent(parent string) bool {
 	for i, val := range *c {
 		if val.parent != nil && *val.parent == parent {
+			log.Debug.Format("Removing parent constraintt %v: %v", parent, val.value.String())
 			(*c)[i], (*c)[len(*c)-1], *c = (*c)[len(*c)-1], Constraint{}, (*c)[:len(*c)-1]
 			return true
 		}
@@ -52,7 +54,12 @@ func (c Constraints) Map(g *Graph, fn func(Constraint, spdl.FlatFlagList) error)
 
 		if val.parent != nil {
 			if parent, ok := g.nodes[*val.parent]; ok {
-				parentFlags = parent.Pkginfo().FlagStates
+				if parent.IsEnabled() {
+					if parent.pkginfo == nil {
+						panic("INVALID" + parent.Name)
+					}
+					parentFlags = parent.Pkginfo().FlagStates
+				}
 			} else {
 				return fmt.Errorf("Invalid parent %v", *val.parent)
 			}
