@@ -88,13 +88,16 @@ func (n *Node) ApplyChanges() error {
 			}
 		}
 		//Check is latest
-		return newControl == nil || spdl.NewVersion(spdl.GT, newControl.Version).Accepts(c.Version)
+		return newControl == nil ||
+			spdl.NewVersion(spdl.GT, newControl.Version).Accepts(c.Version) &&
+				((newControl.Version == c.Version && newControl.Iteration < c.Iteration) || newControl.Version != c.Version)
 	}
 
 	switch n.Type {
 	//try already installed
 	case InstallConvenient:
 		err := n.Repo.MapInstalledByName(n.Graph.root, n.Name, func(p repo.PkgInstallSet) {
+			p.Control.FlagsCrunch()
 			if matchControl(*p.Control) {
 				//Check satisfies flags
 				if flags.IsSubsetOf(p.PkgInfo.FlagStates) {
@@ -115,6 +118,7 @@ func (n *Node) ApplyChanges() error {
 	//latest binary if available
 	case InstallLatestBin:
 		n.Repo.MapAvailableByName(n.Name, func(c control.Control, p pkginfo.PkgInfo) {
+			c.FlagsCrunch()
 			if matchControl(c) {
 				//Check satisfies flags
 				if flags.IsSubsetOf(p.FlagStates) {
@@ -131,6 +135,7 @@ func (n *Node) ApplyChanges() error {
 	//latest src if available
 	case InstallLatestSrc:
 		n.Repo.MapTemplatesByName(n.Name, func(_ string, c control.Control) {
+			c.FlagsCrunch()
 			if matchControl(c) {
 				newControl = &c
 			}

@@ -26,6 +26,41 @@ type Control struct {
 	//Provides Hook (update mime types)
 }
 
+//Hack for older controls for now
+func (c *Control) FlagsCrunch() {
+	//changed := false
+	crunch := func(oldl spdl.DepList) (newl spdl.DepList) {
+		for _, o := range oldl {
+			dupeIndex := -1
+			for i, n := range newl {
+				if o.Name == n.Name {
+					//fmt.Printf("CRUNCH: %v %v:%v\n", c.Name, o.String(), n.String())
+					dupeIndex = i
+					break
+				}
+			}
+			if dupeIndex == -1 {
+				newl = append(newl, o)
+			} else {
+				//changed = true
+				o.Condition = nil
+				if o.Flags != nil && len(o.Flags.Slice()) != 0 {
+					o.Flags.Add(spdl.Flag{Name: o.Flags.Slice()[0].Name, State: spdl.Inherit})
+				}
+				newl[dupeIndex] = o
+			}
+		}
+		return newl
+	}
+	c.Bdeps = crunch(c.Bdeps)
+	c.Deps = crunch(c.Deps)
+	/*
+		if changed {
+			s, _ := json.MarshalIndent(c, "", "\t")
+			fmt.Println(string(s))
+		}*/
+}
+
 func (c Control) String() string {
 	return fmt.Sprintf("%s-%s_%d", c.Name, c.Version, c.Iteration)
 }
