@@ -12,6 +12,7 @@ import (
 	"github.com/serenitylinux/libspack/helpers/http"
 	"github.com/serenitylinux/libspack/helpers/json"
 	"github.com/serenitylinux/libspack/pkginfo"
+	"github.com/serenitylinux/libspack/spakg"
 )
 
 import . "github.com/serenitylinux/libspack/misc"
@@ -185,6 +186,63 @@ func (repo *Repo) updateControlsFromRemote() {
 
 	repo.controls = &list
 	json.EncodeFile(repo.controlCacheFile(), repo.controls)
+}
+
+//TODO rewrite
+func (repo *Repo) LoadLocal() error {
+	if repo.local != nil && len(*repo.local) != 0 {
+		return nil
+	}
+	dir := "/var/cache/spack/spakg/" + repo.Name
+
+	println("loading caches " + dir)
+
+	list := make(PkgInfoMap)
+
+	if !PathExists(dir) {
+		println("whaaa")
+		//TODO return errors.New("Unable to access directory")
+		return nil
+	}
+
+	filelist, err := ioutil.ReadDir(dir)
+	if err != nil {
+		return err
+	}
+
+	for _, file := range filelist {
+		tmpDir, _ := ioutil.TempDir(os.TempDir(), "wield")
+		defer os.RemoveAll(tmpDir)
+
+		pkg, err := spakg.FromFile(dir+"/"+file.Name(), &tmpDir)
+		if err != nil {
+			log.Warn.Format("Error loading %v: %v", dir+"/"+file.Name(), err.Error())
+			continue
+		}
+		if file.Name() != pkg.Pkginfo.String()+".spakg" {
+			log.Warn.Format("Error loading %v: %v", dir+"/"+file.Name(), "Mismatched checksums: "+pkg.Pkginfo.String())
+			continue
+		}
+
+		pki := pkg.Pkginfo
+		key := pki.String()
+		if _, exists := list[key]; !exists {
+			list[key] = make([]pkginfo.PkgInfo, 0)
+		}
+		list[key] = append(list[key], pki)
+
+		c := pkg.Control
+
+		if _, exists := (*repo.controls)[c.Name]; !exists {
+			(*repo.controls)[c.Name] = make([]control.Control, 0)
+		}
+		(*repo.controls)[c.Name] = append((*repo.controls)[c.Name], c)
+	}
+
+	println("found ", len(list))
+
+	repo.local = &list
+	return nil
 }
 
 func (repo *Repo) updatePkgInfosFromRemote() {

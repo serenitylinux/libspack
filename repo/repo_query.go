@@ -2,14 +2,11 @@ package repo
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/serenitylinux/libspack/control"
 	"github.com/serenitylinux/libspack/pkginfo"
-	"github.com/serenitylinux/libspack/spakg"
 )
 
 import . "github.com/serenitylinux/libspack/misc"
@@ -34,63 +31,36 @@ func (repo *Repo) MapTemplatesByName(name string, fn func(string, control.Contro
 }
 
 func (repo *Repo) MapAvailableByName(name string, fn func(control.Control, pkginfo.PkgInfo)) error {
-	for _, ps := range *repo.fetchable {
-		if len(ps) == 0 {
-			continue
-		}
-		if ps[0].Name != name {
-			continue
-		}
-		for _, p := range ps {
-			if cs, ok := (*repo.controls)[p.Name]; ok {
-				for _, c := range cs {
-					if c.Version == p.Version {
-						fn(c, p)
-						break
-					}
-				}
-			} else {
-				panic("info without control")
-			}
-		}
+	if err := repo.LoadLocal(); err != nil {
+		println("Can't load local")
+		println(err.Error())
+		return err
 	}
-	for _, cs := range *repo.controls {
-		if len(cs) == 0 {
-			continue
-		}
-		if cs[0].Name != name {
-			continue
-		}
-		for _, c := range cs {
-			dir := "/var/cache/spack/spakg/" + repo.Name
-			if !PathExists(dir) {
-				//TODO return errors.New("Unable to access directory")
-				return nil
+
+	handle := func(pkgs PkgInfoMap) {
+		for _, ps := range pkgs {
+			if len(ps) == 0 {
+				continue
 			}
-
-			filelist, err := ioutil.ReadDir(dir)
-			if err != nil {
-				return err
+			if ps[0].Name != name {
+				continue
 			}
-
-			for _, file := range filelist {
-				if strings.HasPrefix(file.Name(), c.String()) {
-					tmpDir, _ := ioutil.TempDir(os.TempDir(), "wield")
-					defer os.RemoveAll(tmpDir)
-
-					pkg, err := spakg.FromFile(dir+"/"+file.Name(), &tmpDir)
-					if err != nil {
-						return err
+			for _, p := range ps {
+				if cs, ok := (*repo.controls)[p.Name]; ok {
+					for _, c := range cs {
+						if p.InstanceOf(&c) {
+							fn(c, p)
+							break
+						}
 					}
-					if c.String() == pkg.Control.String() {
-						fn(c, pkg.Pkginfo)
-					} else {
-						println("WALUWALUWALU")
-					}
+				} else {
+					panic("info without control")
 				}
 			}
 		}
 	}
+	handle(*repo.fetchable)
+	handle(*repo.local)
 	return nil
 }
 

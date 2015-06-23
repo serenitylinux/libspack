@@ -31,6 +31,7 @@ type Repo struct {
 	controls      *ControlMap
 	templateFiles *TemplateFileMap
 	fetchable     *PkgInfoMap
+	local         *PkgInfoMap
 	installed     *PkgInstallSetMap
 }
 

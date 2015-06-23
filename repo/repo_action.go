@@ -26,7 +26,7 @@ func (repo *Repo) FetchIfNotCachedSpakg(p *pkginfo.PkgInfo) error {
 			}
 			return err
 		} else {
-			return fmt.Errorf("PkgInfo not in repo: %s", p)
+			return fmt.Errorf("PkgInfo not in repo: %s, %s", p.PrettyString(), out)
 		}
 	}
 	return nil
