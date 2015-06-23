@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"sort"
 
 	"github.com/cam72cam/go-lumberjack/color"
 	"github.com/cam72cam/go-lumberjack/log"
@@ -83,7 +84,7 @@ func buildGraphs(pkgs []spdl.Dep, isForge bool, root string, ignoreBDeps bool, r
 
 		var flags spdl.FlatFlagList
 		if pkg.Flags != nil {
-			flags, err = pkg.Flags.WithDefaults(nil)
+			flags, err = pkg.Flags.WithDefaults(spdl.NewFlatFlagList(0))
 			if err != nil {
 				return err
 			}
@@ -106,13 +107,18 @@ func buildGraphs(pkgs []spdl.Dep, isForge bool, root string, ignoreBDeps bool, r
 
 		added[key] = false
 
+		libc, _ := spdl.ParseDep("libc(+dev)")
+		if err := addToWield([]spdl.Dep{{Name: "base"}, libc}, info.Graph, pkggraph.InstallLatestBin); err != nil {
+			return err
+		}
+
 		if !ignoreBDeps {
 			bdeps := make([]spdl.Dep, 0)
 			for _, bdep := range info.Control.Bdeps {
 				if bdep.Condition != nil && !bdep.Condition.Enabled(info.Pkginfo.FlagStates) {
 					continue //Not enabled
 				}
-				defaults := make(spdl.FlatFlagList)
+				defaults := spdl.NewFlatFlagList(0)
 				if bdep.Flags != nil {
 					defaults, err = bdep.Flags.WithDefaults(info.Pkginfo.FlagStates)
 					if err != nil {
@@ -129,13 +135,9 @@ func buildGraphs(pkgs []spdl.Dep, isForge bool, root string, ignoreBDeps bool, r
 				})
 			}
 
-			if err := addToWield(bdeps, info.Graph, pkggraph.InstallConvenient); err != nil {
+			if err := addToWield(bdeps, info.Graph, pkggraph.InstallLatestBin); err != nil {
 				return err
 			}
-		}
-
-		if err := addToWield([]spdl.Dep{{Name: "base-files"}, {Name: "base"}}, info.Graph, pkggraph.InstallConvenient); err != nil {
-			return err
 		}
 
 		added[key] = true
@@ -200,7 +202,7 @@ func buildGraphs(pkgs []spdl.Dep, isForge bool, root string, ignoreBDeps bool, r
 			fmt.Println(info.Pkginfo.PrettyString())
 			if len(info.Graph.ToWield()) != 0 {
 				fmt.Println(color.White.String("Packages to Wield for ", info.Pkginfo.PrettyString()))
-				for _, pkg := range info.Graph.ToWield() {
+				for _, pkg := range sortp(info.Graph.ToWield()) {
 					fmt.Println("\t" + pkg.Pkginfo().PrettyString())
 				}
 			}
@@ -310,4 +312,21 @@ func wieldGraph(nodes []*pkggraph.Node, root string) error {
 	log.Info.Println()
 
 	return nil
+}
+
+func sortp(orig []*pkggraph.Node) (nl []*pkggraph.Node) {
+	strs := make([]string, 0, len(orig))
+	for _, pkg := range orig {
+		strs = append(strs, pkg.Name)
+	}
+	sort.Strings(strs)
+	for _, str := range strs {
+		for _, pkg := range orig {
+			if pkg.Name == str {
+				nl = append(nl, pkg)
+				break
+			}
+		}
+	}
+	return nl
 }

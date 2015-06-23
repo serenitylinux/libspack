@@ -13,9 +13,9 @@ func (fsl FlagExprList) String() string {
 
 //Returns the Flags with default states
 func (fsl FlagExprList) Defaults() FlatFlagList {
-	res := make(FlatFlagList, 0)
+	res := NewFlatFlagList(len(fsl))
 	for _, fs := range fsl {
-		res[fs.Flag.Name] = fs.Flag
+		res.Add(fs.Flag)
 	}
 	return res
 }

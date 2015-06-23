@@ -157,7 +157,7 @@ func (d *Dep) parse(in *parser.Input) error {
 		return nil
 	}
 
-	new := make(FlagList, 0)
+	new := NewFlagList(0)
 	err := parseFlagSet(&new, in)
 	if err != nil {
 		return err
@@ -183,7 +183,7 @@ func parseFlagSet(s *FlagList, in *parser.Input) error {
 		}
 
 		//TODO maybe check if already exists
-		(*s)[flag.Name] = flag
+		s.Add(flag)
 
 		str, _ := in.Peek(1)
 		if str != "+" && str != "-" && str != "~" && str != "?" {

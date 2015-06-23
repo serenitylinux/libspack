@@ -78,7 +78,7 @@ func (f Flag) EnabledEval(ffl FlatFlagList) (bool, error) {
 	case Inherit, Invert:
 		var res bool
 		if f.Expr == nil {
-			if fl, ok := ffl[f.Name]; ok {
+			if fl, ok := ffl.flags[f.Name]; ok {
 				res = fl.Enabled
 			} else {
 				return false, errors.New("Dependent flag not found")

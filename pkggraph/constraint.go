@@ -81,14 +81,23 @@ func (c Constraints) Map(g *Graph, fn func(Constraint, spdl.FlatFlagList) error)
 }
 
 func (c Constraints) Flags(g *Graph) (total spdl.FlatFlagList, err error) {
-	total = make(spdl.FlatFlagList)
+	total = spdl.NewFlatFlagList(len(c))
 	err = c.Map(g, func(val Constraint, parentFlags spdl.FlatFlagList) error {
 		if val.value.Flags != nil {
 			flags, err := val.value.Flags.WithDefaults(parentFlags)
 			if err != nil {
 				return err
 			}
-			return total.Merge(flags)
+			if err := total.Merge(flags); err != nil {
+				for _, c := range c {
+					var parent string
+					if c.parent != nil {
+						parent = g.nodes[*c.parent].Hash()
+					}
+					fmt.Printf("DEP: %s %s\n", parent, c.value.String())
+				}
+				return err
+			}
 		}
 		return nil
 	})

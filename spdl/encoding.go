@@ -13,24 +13,24 @@ func (res *FlagList) UnmarshalJSON(data []byte) error {
 	if err != nil {
 		return err
 	}
-	fl := make(FlagList, len(strs))
+	fl := NewFlagList(len(strs))
 	for _, str := range strs {
 		flag, err := FromString(str)
 		if err != nil {
 			return err
 		}
-		fl[flag.Name] = flag
+		fl.Add(flag)
 	}
 	*res = fl
 	return nil
 }
 
 func (fl FlagList) MarshalJSON() ([]byte, error) {
-	if len(fl) == 0 {
+	if len(fl.ordered) == 0 {
 		return []byte("[]"), nil
 	}
-	strs := make([]string, 0, len(fl))
-	for _, f := range fl {
+	strs := make([]string, 0, len(fl.ordered))
+	for _, f := range fl.ordered {
 		strs = append(strs, f.String())
 	}
 	return json.Marshal(strs)
@@ -42,24 +42,24 @@ func (res *FlatFlagList) UnmarshalJSON(data []byte) error {
 	if err != nil {
 		return err
 	}
-	fl := make(FlatFlagList, len(strs))
+	fl := NewFlatFlagList(len(strs))
 	for _, str := range strs {
 		flag, err := FlatFromString(str)
 		if err != nil {
 			return err
 		}
-		fl[flag.Name] = flag
+		fl.Add(flag)
 	}
 	*res = fl
 	return nil
 }
 
 func (fl FlatFlagList) MarshalJSON() ([]byte, error) {
-	if len(fl) == 0 {
+	if len(fl.ordered) == 0 {
 		return []byte("[]"), nil
 	}
-	strs := make([]string, 0, len(fl))
-	for _, f := range fl {
+	strs := make([]string, 0, len(fl.ordered))
+	for _, f := range fl.ordered {
 		strs = append(strs, f.String())
 	}
 	return json.Marshal(strs)
