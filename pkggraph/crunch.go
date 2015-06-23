@@ -87,7 +87,7 @@ func (g *Graph) crunch(iters Iterations) error {
 
 	//prune changed nodes
 	log.Debug.Format("Pruning nodes")
-	for _, node := range g.nodes {
+	for _, node := range g.ordered {
 		if node.hasNewConstraints {
 			log.Debug.Format("Pruning node %v", node.Name)
 			if err := node.ApplyChanges(); err != nil {
