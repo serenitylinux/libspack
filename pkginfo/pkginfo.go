@@ -28,7 +28,7 @@ func (p PkgInfo) PrettyString() string {
 
 func (p *PkgInfo) flagHash() uint32 {
 	str := p.Name
-	for _, flag := range p.FlagStates {
+	for _, flag := range p.FlagStates.Slice() {
 		str += flag.String()
 	}
 	return crc32.ChecksumIEEE([]byte(str))
@@ -58,15 +58,15 @@ func (p *PkgInfo) InstanceOf(c *control.Control) bool {
 }
 
 func (p *PkgInfo) SetFlagState(f spdl.FlatFlag) error {
-	if _, ok := p.FlagStates[f.Name]; !ok {
+	if _, ok := p.FlagStates.Contains(f.Name); !ok {
 		return fmt.Errorf("Invalid flag %v for %v", f.Name, p.Name)
 	}
-	p.FlagStates[f.Name] = f
+	p.FlagStates.Add(f)
 	return nil
 }
 
 func (p *PkgInfo) SetFlagStates(states spdl.FlatFlagList) error {
-	for _, f := range states {
+	for _, f := range states.Slice() {
 		if err := p.SetFlagState(f); err != nil {
 			return err
 		}
