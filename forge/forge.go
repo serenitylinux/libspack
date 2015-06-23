@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
@@ -119,6 +118,9 @@ func runPart(part, fileName, action, src_dir, root string, states spdl.FlatFlagL
 			mkdir /dev;
 		fi
 
+		mkdir -p /etc/
+		echo "nameserver 8.8.8.8" > /etc/resolv.conf
+
 		function none {
 			return 0
 		}
@@ -134,8 +136,12 @@ func runPart(part, fileName, action, src_dir, root string, states spdl.FlatFlagL
 		if [ -f %[4]s ]; then
 			source %[4]s
 		fi
+
+		echo $PWD
 		
 		cd %[5]s/$srcdir
+
+		echo $PWD
 		
 		set +e 
 		declare -f %[1]s > /dev/null
@@ -149,11 +155,11 @@ func runPart(part, fileName, action, src_dir, root string, states spdl.FlatFlagL
 		fi`
 
 	var flagstuff string
-	for _, fl := range states {
+	for _, fl := range states.Slice() {
 		flagstuff += fmt.Sprintf("flag_%s=%t \n", fl.Name, fl.Enabled)
 	}
 
-	forge_helper = fmt.Sprintf(forge_helper, part, fileName, action, filepath.Dir(fileName)+"/default", src_dir, flagstuff, envString(env))
+	forge_helper = fmt.Sprintf(forge_helper, part, fileName, action, filepath.Dir(fileName)+"/default", "/src", flagstuff, envString(env))
 
 	Header("Running " + part)
 
@@ -348,18 +354,19 @@ func Forge(template, outfile, root string, states spdl.FlatFlagList, test bool, 
 		return err
 	}
 
-	basedir, _ := ioutil.TempDir(root, "forge")
-	defer os.RemoveAll(basedir)
+	//basedir, _ := ioutil.TempDir(root, "forge")
+	//defer os.RemoveAll(basedir)
+	basedir := ""
 
-	cmd := exec.Command("cp", template, basedir)
+	cmd := exec.Command("cp", template, root)
 	err = cmd.Run()
 	if err != nil {
 		return err
 	}
-	template = basedir + "/" + filepath.Base(template)
+	template = "/" + filepath.Base(template)
 
-	dest_dir := basedir + "/dest/"
-	src_dir := basedir + "/src/"
+	dest_dir := root + basedir + "dest"
+	src_dir := root + basedir + "src"
 	os.Mkdir(dest_dir, 0755)
 	os.Mkdir(src_dir, 0755)
 
