@@ -11,7 +11,7 @@ import (
 	"github.com/serenitylinux/libspack/control"
 	"github.com/serenitylinux/libspack/forge"
 	"github.com/serenitylinux/libspack/misc"
-	"github.com/serenitylinux/libspack/pkggraph"
+	"github.com/serenitylinux/libspack/crunch"
 	"github.com/serenitylinux/libspack/pkginfo"
 	"github.com/serenitylinux/libspack/repo"
 	"github.com/serenitylinux/libspack/spakg"
@@ -22,16 +22,16 @@ import (
 //TODO: reinstall
 
 func Forge(pkgs []spdl.Dep, root string, ignoreBDeps bool) error {
-	return buildGraphs(pkgs, true, root, ignoreBDeps, false, pkggraph.InstallConvenient)
+	return buildGraphs(pkgs, true, root, ignoreBDeps, false, crunch.InstallConvenient)
 }
 
-func Wield(pkgs []spdl.Dep, root string, reinstall bool, itype pkggraph.InstallType) error {
+func Wield(pkgs []spdl.Dep, root string, reinstall bool, itype crunch.InstallType) error {
 	return buildGraphs(pkgs, false, root, false, reinstall, itype)
 }
 
-func buildGraphs(pkgs []spdl.Dep, isForge bool, root string, ignoreBDeps bool, reinstall bool, itype pkggraph.InstallType) error {
+func buildGraphs(pkgs []spdl.Dep, isForge bool, root string, ignoreBDeps bool, reinstall bool, itype crunch.InstallType) error {
 	type forgeInfo struct {
-		Graph *pkggraph.Graph
+		Graph *crunch.Graph
 		Root  string
 
 		Pkginfo  *pkginfo.PkgInfo
@@ -40,13 +40,13 @@ func buildGraphs(pkgs []spdl.Dep, isForge bool, root string, ignoreBDeps bool, r
 		Template string
 	}
 
-	graph, err := pkggraph.NewGraph(root, repo.GetAllRepos())
+	graph, err := crunch.NewGraph(root, repo.GetAllRepos())
 	if err != nil {
 		return fmt.Errorf("Unable to load package graph: %v", err.Error())
 	}
 
 	var addToForge func(spdl.Dep) error
-	var addToWield func([]spdl.Dep, *pkggraph.Graph, pkggraph.InstallType) error
+	var addToWield func([]spdl.Dep, *crunch.Graph, crunch.InstallType) error
 
 	toForge := make(map[string]*forgeInfo, 0)
 	added := make(map[string]bool)
@@ -108,7 +108,7 @@ func buildGraphs(pkgs []spdl.Dep, isForge bool, root string, ignoreBDeps bool, r
 		added[key] = false
 
 		libc, _ := spdl.ParseDep("libc(+dev)")
-		if err := addToWield([]spdl.Dep{{Name: "base"}, libc}, info.Graph, pkggraph.InstallLatestBin); err != nil {
+		if err := addToWield([]spdl.Dep{{Name: "base"}, libc}, info.Graph, crunch.InstallLatestBin); err != nil {
 			return err
 		}
 
@@ -135,7 +135,7 @@ func buildGraphs(pkgs []spdl.Dep, isForge bool, root string, ignoreBDeps bool, r
 				})
 			}
 
-			if err := addToWield(bdeps, info.Graph, pkggraph.InstallLatestBin); err != nil {
+			if err := addToWield(bdeps, info.Graph, crunch.InstallLatestBin); err != nil {
 				return err
 			}
 		}
@@ -157,7 +157,7 @@ func buildGraphs(pkgs []spdl.Dep, isForge bool, root string, ignoreBDeps bool, r
 		return fmt.Errorf("Unable to load currently installed packges: %v", err.Error())
 	}
 
-	addToWield = func(pkgs []spdl.Dep, g *pkggraph.Graph, itype pkggraph.InstallType) error {
+	addToWield = func(pkgs []spdl.Dep, g *crunch.Graph, itype crunch.InstallType) error {
 		for _, dep := range pkgs {
 			log.Info.Format("Wield %v", dep.String())
 			err := g.EnablePackage(dep, itype)
@@ -258,7 +258,7 @@ func buildGraphs(pkgs []spdl.Dep, isForge bool, root string, ignoreBDeps bool, r
 	return nil
 }
 
-func wieldGraph(nodes []*pkggraph.Node, root string) error {
+func wieldGraph(nodes []*crunch.Node, root string) error {
 	type pkgset struct {
 		spkg *spakg.Spakg
 		repo *repo.Repo
@@ -314,7 +314,7 @@ func wieldGraph(nodes []*pkggraph.Node, root string) error {
 	return nil
 }
 
-func sortp(orig []*pkggraph.Node) (nl []*pkggraph.Node) {
+func sortp(orig []*crunch.Node) (nl []*crunch.Node) {
 	strs := make([]string, 0, len(orig))
 	for _, pkg := range orig {
 		strs = append(strs, pkg.Name)

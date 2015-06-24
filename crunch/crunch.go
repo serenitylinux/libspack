@@ -1,4 +1,4 @@
-package pkggraph
+package crunch
 
 import (
 	"fmt"
