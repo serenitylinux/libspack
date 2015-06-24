@@ -3,6 +3,27 @@ package spdl
 var and op = And
 var or op = Or
 
+func buildFlagListPtr(fs ...Flag) *FlagList {
+	res := buildFlagList(fs...)
+	return &res
+}
+
+func buildFlagList(fs ...Flag) FlagList {
+	fl := NewFlagList(len(fs))
+	for _, f := range fs {
+		fl.Add(f)
+	}
+	return fl
+}
+
+func buildFlatFlagList(fs ...FlatFlag) FlatFlagList {
+	fl := NewFlatFlagList(len(fs))
+	for _, f := range fs {
+		fl.Add(f)
+	}
+	return fl
+}
+
 var fulldepJSON = "[-cond && (-baz || +bar)] basic >=3ac <=10.4b (+dev ~doc(+foo || (-baza && +build)) ?other(-bazh))"
 var fulldep = Dep{
 	Condition: &ExprList{
@@ -29,9 +50,9 @@ var fulldep = Dep{
 		typ: LT,
 		ver: "10.4b",
 	},
-	Flags: &FlagList{
-		"dev": Flag{Name: "dev", State: Enabled},
-		"doc": Flag{
+	Flags: buildFlagListPtr(
+		Flag{Name: "dev", State: Enabled},
+		Flag{
 			Name:  "doc",
 			State: Invert,
 			Expr: &ExprList{
@@ -50,12 +71,12 @@ var fulldep = Dep{
 				},
 			},
 		},
-		"other": Flag{
+		Flag{
 			Name:  "other",
 			State: Inherit,
 			Expr: &ExprList{
 				e: expr{flag: FlatFlag{Name: "bazh", Enabled: false}},
 			},
 		},
-	},
+	),
 }

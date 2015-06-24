@@ -87,12 +87,12 @@ func TestDepParse(t *testing.T) {
 			input: "basic(+dev -doc ?foo ~bar)",
 			expect: Dep{
 				Name: "basic",
-				Flags: &FlagList{
-					"dev": Flag{Name: "dev", State: Enabled},
-					"doc": Flag{Name: "doc", State: Disabled},
-					"foo": Flag{Name: "foo", State: Inherit},
-					"bar": Flag{Name: "bar", State: Invert},
-				},
+				Flags: buildFlagListPtr(
+					Flag{Name: "dev", State: Enabled},
+					Flag{Name: "doc", State: Disabled},
+					Flag{Name: "foo", State: Inherit},
+					Flag{Name: "bar", State: Invert},
+				),
 			},
 		},
 		{
@@ -100,16 +100,16 @@ func TestDepParse(t *testing.T) {
 			input: "basic(+dev ~doc(+foo))",
 			expect: Dep{
 				Name: "basic",
-				Flags: &FlagList{
-					"dev": Flag{Name: "dev", State: Enabled},
-					"doc": Flag{
+				Flags: buildFlagListPtr(
+					Flag{Name: "dev", State: Enabled},
+					Flag{
 						Name:  "doc",
 						State: Invert,
 						Expr: &ExprList{
 							e: expr{flag: FlatFlag{Name: "foo", Enabled: true}},
 						},
 					},
-				},
+				),
 			},
 		},
 		{
@@ -117,9 +117,9 @@ func TestDepParse(t *testing.T) {
 			input: "basic(+dev ~doc(+foo || (-baza && +build)) ?other(-bazh))",
 			expect: Dep{
 				Name: "basic",
-				Flags: &FlagList{
-					"dev": Flag{Name: "dev", State: Enabled},
-					"doc": Flag{
+				Flags: buildFlagListPtr(
+					Flag{Name: "dev", State: Enabled},
+					Flag{
 						Name:  "doc",
 						State: Invert,
 						Expr: &ExprList{
@@ -138,14 +138,14 @@ func TestDepParse(t *testing.T) {
 							},
 						},
 					},
-					"other": Flag{
+					Flag{
 						Name:  "other",
 						State: Inherit,
 						Expr: &ExprList{
 							e: expr{flag: FlatFlag{Name: "bazh", Enabled: false}},
 						},
 					},
-				},
+				),
 			},
 		},
 		{

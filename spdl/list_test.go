@@ -1,24 +1,22 @@
-package spdl_test
+package spdl
 
 import (
 	"reflect"
 	"testing"
-
-	"github.com/serenitylinux/libspack/spdl"
 )
 
 func TestFlagListString(t *testing.T) {
-	fl := spdl.FlagList{
-		"foo":  spdl.Flag{Name: "foo", State: spdl.Enabled},
-		"bar":  spdl.Flag{Name: "bar", State: spdl.Disabled},
-		"baz":  spdl.Flag{Name: "baz", State: spdl.Inherit},
-		"bash": spdl.Flag{Name: "bash", State: spdl.Invert},
-	}
+	fl := buildFlagList(
+		Flag{Name: "foo", State: Enabled},
+		Flag{Name: "bar", State: Disabled},
+		Flag{Name: "baz", State: Inherit},
+		Flag{Name: "bash", State: Invert},
+	)
 
-	ffl := spdl.FlatFlagList{
-		"foo": spdl.FlatFlag{Name: "foo", Enabled: true},
-		"bar": spdl.FlatFlag{Name: "bar", Enabled: false},
-	}
+	ffl := buildFlatFlagList(
+		FlatFlag{Name: "foo", Enabled: true},
+		FlatFlag{Name: "bar", Enabled: false},
+	)
 	if expect, actual := "+foo -bar ?baz ~bash", fl.String(); expect != actual {
 		t.Errorf("Expected %s, got %s", expect, actual)
 	}
@@ -32,8 +30,8 @@ func TestFlagListString(t *testing.T) {
 func TestFlagListSubset(t *testing.T) {
 	type Case struct {
 		name   string
-		sub    spdl.FlatFlagList
-		super  spdl.FlatFlagList
+		sub    FlatFlagList
+		super  FlatFlagList
 		expect bool
 	}
 	cases := []Case{
@@ -43,48 +41,48 @@ func TestFlagListSubset(t *testing.T) {
 		},
 		{
 			name: "Equal",
-			sub: spdl.FlatFlagList{
-				"foo": spdl.FlatFlag{Name: "foo", Enabled: true},
-				"bar": spdl.FlatFlag{Name: "bar", Enabled: false},
-			},
-			super: spdl.FlatFlagList{
-				"foo": spdl.FlatFlag{Name: "foo", Enabled: true},
-				"bar": spdl.FlatFlag{Name: "bar", Enabled: false},
-			},
+			sub: buildFlatFlagList(
+				FlatFlag{Name: "foo", Enabled: true},
+				FlatFlag{Name: "bar", Enabled: false},
+			),
+			super: buildFlatFlagList(
+				FlatFlag{Name: "foo", Enabled: true},
+				FlatFlag{Name: "bar", Enabled: false},
+			),
 			expect: true,
 		},
 		{
 			name: "Subset",
-			sub: spdl.FlatFlagList{
-				"foo": spdl.FlatFlag{Name: "foo", Enabled: true},
-			},
-			super: spdl.FlatFlagList{
-				"foo": spdl.FlatFlag{Name: "foo", Enabled: true},
-				"bar": spdl.FlatFlag{Name: "bar", Enabled: false},
-			},
+			sub: buildFlatFlagList(
+				FlatFlag{Name: "foo", Enabled: true},
+			),
+			super: buildFlatFlagList(
+				FlatFlag{Name: "foo", Enabled: true},
+				FlatFlag{Name: "bar", Enabled: false},
+			),
 			expect: true,
 		},
 		{
 			name: "Super",
-			sub: spdl.FlatFlagList{
-				"foo": spdl.FlatFlag{Name: "foo", Enabled: true},
-				"bar": spdl.FlatFlag{Name: "bar", Enabled: false},
-			},
-			super: spdl.FlatFlagList{
-				"foo": spdl.FlatFlag{Name: "foo", Enabled: true},
-			},
+			sub: buildFlatFlagList(
+				FlatFlag{Name: "foo", Enabled: true},
+				FlatFlag{Name: "bar", Enabled: false},
+			),
+			super: buildFlatFlagList(
+				FlatFlag{Name: "foo", Enabled: true},
+			),
 			expect: false,
 		},
 		{
 			name: "Diff enabled",
-			sub: spdl.FlatFlagList{
-				"foo": spdl.FlatFlag{Name: "foo", Enabled: false},
-				"bar": spdl.FlatFlag{Name: "bar", Enabled: false},
-			},
-			super: spdl.FlatFlagList{
-				"foo": spdl.FlatFlag{Name: "foo", Enabled: true},
-				"bar": spdl.FlatFlag{Name: "bar", Enabled: false},
-			},
+			sub: buildFlatFlagList(
+				FlatFlag{Name: "foo", Enabled: false},
+				FlatFlag{Name: "bar", Enabled: false},
+			),
+			super: buildFlatFlagList(
+				FlatFlag{Name: "foo", Enabled: true},
+				FlatFlag{Name: "bar", Enabled: false},
+			),
 			expect: false,
 		},
 	}
@@ -102,10 +100,10 @@ func TestFlagListSubset(t *testing.T) {
 }
 
 func TestFlagListEnabled(t *testing.T) {
-	ffl := spdl.FlatFlagList{
-		"foo": spdl.FlatFlag{Name: "foo", Enabled: true},
-		"bar": spdl.FlatFlag{Name: "bar", Enabled: false},
-	}
+	ffl := buildFlatFlagList(
+		FlatFlag{Name: "foo", Enabled: true},
+		FlatFlag{Name: "bar", Enabled: false},
+	)
 	type Case struct {
 		name   string
 		flag   string
@@ -138,22 +136,19 @@ func TestFlagListEnabled(t *testing.T) {
 }
 
 func TestFlagListClone(t *testing.T) {
-	orig := spdl.FlagList{
-		"foo":  spdl.Flag{Name: "foo", State: spdl.Enabled},
-		"bar":  spdl.Flag{Name: "bar", State: spdl.Disabled},
-		"baz":  spdl.Flag{Name: "baz", State: spdl.Inherit},
-		"bash": spdl.Flag{Name: "bash", State: spdl.Invert},
-	}
+	orig := buildFlagList(
+		Flag{Name: "foo", State: Enabled},
+		Flag{Name: "bar", State: Disabled},
+		Flag{Name: "baz", State: Inherit},
+		Flag{Name: "bash", State: Invert},
+	)
 	clone := orig.Clone()
 	if !reflect.DeepEqual(orig, clone) {
 		t.Errorf("Clones are not equal to the original")
 	}
 
-	foo := clone["foo"]
-	foo.State = spdl.Disabled
-
-	clone["foo"] = foo
-	if orig["foo"].State != spdl.Enabled {
+	clone.Add(Flag{Name: "foo", State: Disabled})
+	if f, ok := orig.Contains("foo"); !ok || f.State != Enabled {
 		t.Errorf("Not a deep enough clone")
 	}
 }
@@ -161,65 +156,65 @@ func TestFlagListClone(t *testing.T) {
 func TestFlagListDefaults(t *testing.T) {
 	type Case struct {
 		name     string
-		original spdl.FlagList
-		defaults spdl.FlatFlagList
-		expect   spdl.FlatFlagList
+		original FlagList
+		defaults FlatFlagList
+		expect   FlatFlagList
 		err      bool
 	}
 	cases := []Case{
 		{
 			name: "Simple (no defaults)",
-			original: spdl.FlagList{
-				"foo": spdl.Flag{Name: "foo", State: spdl.Enabled},
-				"bar": spdl.Flag{Name: "bar", State: spdl.Disabled},
-			},
-			expect: spdl.FlatFlagList{
-				"foo": spdl.FlatFlag{Name: "foo", Enabled: true},
-				"bar": spdl.FlatFlag{Name: "bar", Enabled: false},
-			},
+			original: buildFlagList(
+				Flag{Name: "foo", State: Enabled},
+				Flag{Name: "bar", State: Disabled},
+			),
+			expect: buildFlatFlagList(
+				FlatFlag{Name: "foo", Enabled: true},
+				FlatFlag{Name: "bar", Enabled: false},
+			),
 		},
 		{
 			name: "With Defaults",
-			original: spdl.FlagList{
-				"foo":   spdl.Flag{Name: "foo", State: spdl.Enabled},
-				"bar":   spdl.Flag{Name: "bar", State: spdl.Disabled},
-				"baz":   spdl.Flag{Name: "baz", State: spdl.Inherit},
-				"basha": spdl.Flag{Name: "basha", State: spdl.Invert},
-				"bashb": spdl.Flag{Name: "bashb", State: spdl.Invert},
-			},
-			defaults: spdl.FlatFlagList{
-				"baz":   spdl.FlatFlag{Name: "baz", Enabled: true},
-				"basha": spdl.FlatFlag{Name: "basha", Enabled: true},
-				"bashb": spdl.FlatFlag{Name: "bashb", Enabled: false},
-			},
-			expect: spdl.FlatFlagList{
-				"foo":   spdl.FlatFlag{Name: "foo", Enabled: true},
-				"bar":   spdl.FlatFlag{Name: "bar", Enabled: false},
-				"baz":   spdl.FlatFlag{Name: "baz", Enabled: true},
-				"basha": spdl.FlatFlag{Name: "basha", Enabled: false},
-				"bashb": spdl.FlatFlag{Name: "bashb", Enabled: true},
-			},
+			original: buildFlagList(
+				Flag{Name: "foo", State: Enabled},
+				Flag{Name: "bar", State: Disabled},
+				Flag{Name: "baz", State: Inherit},
+				Flag{Name: "basha", State: Invert},
+				Flag{Name: "bashb", State: Invert},
+			),
+			defaults: buildFlatFlagList(
+				FlatFlag{Name: "baz", Enabled: true},
+				FlatFlag{Name: "basha", Enabled: true},
+				FlatFlag{Name: "bashb", Enabled: false},
+			),
+			expect: buildFlatFlagList(
+				FlatFlag{Name: "foo", Enabled: true},
+				FlatFlag{Name: "bar", Enabled: false},
+				FlatFlag{Name: "baz", Enabled: true},
+				FlatFlag{Name: "basha", Enabled: false},
+				FlatFlag{Name: "bashb", Enabled: true},
+			),
 		},
 		{
 			name: "Missing",
-			original: spdl.FlagList{
-				"foo":   spdl.Flag{Name: "foo", State: spdl.Enabled},
-				"bar":   spdl.Flag{Name: "bar", State: spdl.Disabled},
-				"baz":   spdl.Flag{Name: "baz", State: spdl.Inherit},
-				"basha": spdl.Flag{Name: "basha", State: spdl.Invert},
-				"bashb": spdl.Flag{Name: "bashb", State: spdl.Invert},
-			},
-			defaults: spdl.FlatFlagList{
-				"baz":   spdl.FlatFlag{Name: "baz", Enabled: true},
-				"basha": spdl.FlatFlag{Name: "basha", Enabled: true},
-			},
-			expect: spdl.FlatFlagList{
-				"foo":   spdl.FlatFlag{Name: "foo", Enabled: true},
-				"bar":   spdl.FlatFlag{Name: "bar", Enabled: false},
-				"baz":   spdl.FlatFlag{Name: "baz", Enabled: true},
-				"basha": spdl.FlatFlag{Name: "basha", Enabled: false},
-				"bashb": spdl.FlatFlag{Name: "bashb", Enabled: true},
-			},
+			original: buildFlagList(
+				Flag{Name: "foo", State: Enabled},
+				Flag{Name: "bar", State: Disabled},
+				Flag{Name: "baz", State: Inherit},
+				Flag{Name: "basha", State: Invert},
+				Flag{Name: "bashb", State: Invert},
+			),
+			defaults: buildFlatFlagList(
+				FlatFlag{Name: "baz", Enabled: true},
+				FlatFlag{Name: "basha", Enabled: true},
+			),
+			expect: buildFlatFlagList(
+				FlatFlag{Name: "foo", Enabled: true},
+				FlatFlag{Name: "bar", Enabled: false},
+				FlatFlag{Name: "baz", Enabled: true},
+				FlatFlag{Name: "basha", Enabled: false},
+				FlatFlag{Name: "bashb", Enabled: true},
+			),
 			err: true,
 		},
 	}
