@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/cam72cam/go-lumberjack/log"
 	"github.com/serenitylinux/libspack/repo"
 	"github.com/serenitylinux/libspack/spdl"
 )
@@ -31,15 +32,17 @@ func NewGraph(root string, repos repo.RepoList) (*Graph, error) {
 		nodes:   make(map[string]*Node, 100),
 	}
 
-	for _, repo := range repos {
-		for _, name := range repo.GetAllNames() {
+	for _, r := range repos {
+		r.MapWithName(func(name string, _ []repo.Entry) {
 			if curr, ok := g.nodes[name]; ok {
-				return nil, fmt.Errorf("Duplicate package name %v::%v, %v::%v", repo.Name, name, curr.Repo.Name, curr.Name)
+				log.Warn.Format("Duplicate package name %v::%v, %v::%v", r.Name, name, curr.Repo.Name, curr.Name)
+				return
 			}
-			node := NewNode(name, repo, g)
+			node := NewNode(name, r, g)
 			g.ordered = append(g.ordered, node)
 			g.nodes[name] = node
-		}
+
+		})
 	}
 
 	return g, nil

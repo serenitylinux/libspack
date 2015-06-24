@@ -19,17 +19,9 @@ func (repo *Repo) templatesDir() string {
 func (repo *Repo) packagesDir() string {
 	return PackagesDir + repo.Name + "/"
 }
-func (repo *Repo) controlCacheFile() string {
+func (repo *Repo) cacheFile() string {
 	os.MkdirAll(ReposCacheDir+repo.Name, 0755) //I am tired and this should work for now
-	return ReposCacheDir + repo.Name + "-Controls.json"
-}
-func (repo *Repo) pkgInfoCacheFile() string {
-	os.MkdirAll(ReposCacheDir+repo.Name, 0755) //I am tired and this should work for now
-	return ReposCacheDir + repo.Name + "-PkgInfo.json"
-}
-func (repo *Repo) templateListCacheFile() string {
-	os.MkdirAll(ReposCacheDir+repo.Name, 0755) //I am tired and this should work for now
-	return ReposCacheDir + repo.Name + "-Templates.json"
+	return ReposCacheDir + repo.Name + ".json"
 }
 func (repo *Repo) installedPkgsDir() string {
 	return InstallDir + repo.Name + "/"

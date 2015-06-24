@@ -238,7 +238,7 @@ func buildGraphs(pkgs []spdl.Dep, isForge bool, root string, ignoreBDeps bool, r
 			}
 
 			log.Info.Format("Forging %s", info.Pkginfo.PrettyString())
-			spakgFile := info.Repo.GetSpakgOutput(info.Pkginfo)
+			spakgFile := info.Repo.GetSpakgOutput(*info.Pkginfo)
 			err = forge.Forge(info.Template, spakgFile, info.Root, info.Pkginfo.FlagStates, false, isInteractive)
 			if err != nil {
 				return err
@@ -269,12 +269,12 @@ func wieldGraph(nodes []*pkggraph.Node, root string) error {
 	//Fetch Packages
 	for _, pkg := range nodes {
 		pkginfo := pkg.Pkginfo()
-		err := pkg.Repo.FetchIfNotCachedSpakg(&pkginfo)
+		err := pkg.Repo.FetchIfNotCachedSpakg(pkginfo)
 		if err != nil {
 			return err
 		}
 
-		pkgfile := pkg.Repo.GetSpakgOutput(&pkginfo)
+		pkgfile := pkg.Repo.GetSpakgOutput(pkginfo)
 		spkg, err := spakg.FromFile(pkgfile, nil)
 		if err != nil {
 			return err

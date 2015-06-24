@@ -37,6 +37,7 @@ func (repo *Repo) RefreshRemote() {
 }
 
 func (repo *Repo) UpdateCaches() {
+	repo.entries = make(map[string][]Entry)
 	//if we have remote templates
 	if repo.RemoteTemplates != "" {
 		repo.updateControlsFromTemplates()
@@ -48,12 +49,14 @@ func (repo *Repo) UpdateCaches() {
 	if repo.RemotePackages != "" {
 		repo.updatePkgInfosFromRemote()
 	}
+
+	repo.loadLocal()
+
+	json.EncodeFile(repo.cacheFile(), repo.entries)
 }
 
 func (repo *Repo) LoadCaches() {
-	repo.loadControlCache()
-	repo.loadPkgInfoCache()
-	repo.loadTemplateListCache()
+	repo.loadCache()
 	repo.loadInstalledPackagesList()
 }
 
@@ -113,56 +116,71 @@ func readAll(dir string, regex *regexp.Regexp, todo func(file string)) error {
 
 	for _, file := range filelist {
 		if regex.MatchString(dir + file.Name()) {
-			todo(dir + "/" + file.Name())
+			todo(dir + file.Name())
 		}
 	}
 	return nil
 }
 
-//Will also populate template list
+func (repo *Repo) addEntry(e Entry) {
+	key := e.Control.Name
+	if _, ok := repo.entries[key]; !ok {
+		log.Debug.Format("Adding: %+v", e)
+		repo.entries[key] = []Entry{e}
+		return
+	}
+
+	foundIndex := -1
+	var found Entry
+	for i, entry := range repo.entries[key] {
+		if entry.Control.String() == e.Control.String() {
+			foundIndex = i
+			found = entry
+			break
+		}
+	}
+
+	if foundIndex == -1 {
+		log.Debug.Format("Adding: %+v", e)
+		repo.entries[key] = append(repo.entries[key], e)
+		return
+	}
+
+	//MERGE
+
+	if e.Template != "" {
+		if found.Template != "" {
+			log.Warn.Format("Duplicate template for %v: %v vs %v", key, e.Template, found.Template)
+		} else {
+			found.Template = e.Template
+		}
+	}
+
+	if len(e.Available) != 0 {
+		found.Available = append(found.Available, e.Available...)
+	}
+
+	repo.entries[key] = append(repo.entries[key], found)
+}
+
 func (repo *Repo) updateControlsFromTemplates() {
-	//Generates new list and writes to cache
-	list := make(ControlMap)
-
-	dir := repo.templatesDir()
-
 	readFunc := func(file string) {
 		c, err := control.FromTemplateFile(file)
-
 		if err != nil {
 			log.Warn.Format("Invalid template in repo %s (%s) : %s", repo.Name, file, err.Error())
 			return
 		}
-
-		// Initialize list of controls for current name if nessesary
-		if _, exists := list[c.Name]; !exists {
-			list[c.Name] = make([]control.Control, 0)
-		}
-
-		if _, exists := (*repo.templateFiles)[c.Name]; !exists {
-			(*repo.templateFiles)[c.Name] = make(map[string]string)
-		}
-
-		(*repo.templateFiles)[c.Name][c.String()] = file
-		list[c.Name] = append(list[c.Name], c)
+		repo.addEntry(Entry{Control: c, Template: file})
 	}
 
-	err := readAll(dir, regexp.MustCompile(".*\\.pie"), readFunc)
-
+	err := readAll(repo.templatesDir(), regexp.MustCompile(".*\\.pie"), readFunc)
 	if err != nil {
 		log.Warn.Format("Unable to load repo %s's templates: %s", repo.Name, err)
-		return
 	}
-
-	repo.controls = &list
-	json.EncodeFile(repo.controlCacheFile(), repo.controls)
-	json.EncodeFile(repo.templateListCacheFile(), repo.templateFiles)
 }
 
+//TODO merge with updatePkgiInfosFromRemote
 func (repo *Repo) updateControlsFromRemote() {
-	// finds all files in remote dir and writes to cache
-	list := make(ControlMap)
-
 	readFunc := func(file string) {
 		var c control.Control
 		err := json.DecodeFile(file, &c)
@@ -170,148 +188,78 @@ func (repo *Repo) updateControlsFromRemote() {
 			log.Warn.Format("Invalid control %s in repo %s: %v", file, repo.Name, err.Error())
 			return
 		}
-
-		if _, exists := list[c.Name]; !exists {
-			list[c.Name] = make([]control.Control, 0)
-		}
-		list[c.Name] = append(list[c.Name], c)
+		repo.addEntry(Entry{Control: c})
 	}
 
 	err := readAll(repo.packagesDir(), regexp.MustCompile(".*.control"), readFunc)
-
 	if err != nil {
 		log.Warn.Format("Unable to load repo %s's controls: %s", repo.Name, err)
-		return
 	}
-
-	repo.controls = &list
-	json.EncodeFile(repo.controlCacheFile(), repo.controls)
-}
-
-//TODO rewrite
-func (repo *Repo) LoadLocal() error {
-	if repo.local != nil && len(*repo.local) != 0 {
-		return nil
-	}
-	dir := "/var/cache/spack/spakg/" + repo.Name
-
-	println("loading caches " + dir)
-
-	list := make(PkgInfoMap)
-
-	if !PathExists(dir) {
-		println("whaaa")
-		//TODO return errors.New("Unable to access directory")
-		return nil
-	}
-
-	filelist, err := ioutil.ReadDir(dir)
-	if err != nil {
-		return err
-	}
-
-	for _, file := range filelist {
-		tmpDir, _ := ioutil.TempDir(os.TempDir(), "wield")
-		defer os.RemoveAll(tmpDir)
-
-		pkg, err := spakg.FromFile(dir+"/"+file.Name(), &tmpDir)
-		if err != nil {
-			log.Warn.Format("Error loading %v: %v", dir+"/"+file.Name(), err.Error())
-			continue
-		}
-		if file.Name() != pkg.Pkginfo.String()+".spakg" {
-			log.Warn.Format("Error loading %v: %v", dir+"/"+file.Name(), "Mismatched checksums: "+pkg.Pkginfo.String())
-			continue
-		}
-
-		pki := pkg.Pkginfo
-		key := pki.String()
-		if _, exists := list[key]; !exists {
-			list[key] = make([]pkginfo.PkgInfo, 0)
-		}
-		list[key] = append(list[key], pki)
-
-		c := pkg.Control
-
-		if _, exists := (*repo.controls)[c.Name]; !exists {
-			(*repo.controls)[c.Name] = make([]control.Control, 0)
-		}
-		(*repo.controls)[c.Name] = append((*repo.controls)[c.Name], c)
-	}
-
-	println("found ", len(list))
-
-	repo.local = &list
-	return nil
 }
 
 func (repo *Repo) updatePkgInfosFromRemote() {
-	//Generates new list and writes to cache
-	list := make(PkgInfoMap)
-
 	readFunc := func(file string) {
 		var pki pkginfo.PkgInfo
 		err := json.DecodeFile(file, &pki)
-
 		if err != nil {
 			log.Warn.Format("Invalid pkginfo %s in repo %s: %v", file, repo.Name, err.Error())
 			return
 		}
-
-		key := pki.String()
-		if _, exists := list[key]; !exists {
-			list[key] = make([]pkginfo.PkgInfo, 0)
-		}
-		list[key] = append(list[key], pki)
+		repo.addEntry(Entry{
+			//TODO HACK to fake control
+			Control: control.Control{
+				Name:      pki.Name,
+				Version:   pki.Version,
+				Iteration: pki.Iteration,
+			},
+			Available: []pkginfo.PkgInfo{pki},
+		})
 	}
 
 	err := readAll(repo.packagesDir(), regexp.MustCompile(".*.pkginfo"), readFunc)
 	if err != nil {
 		log.Warn.Format("Unable to load repo %s's controls: %s", repo.Name, err)
-		return
 	}
-
-	repo.fetchable = &list
-	json.EncodeFile(repo.pkgInfoCacheFile(), repo.fetchable)
 }
 
-func (repo *Repo) loadControlCache() {
-	log.Debug.Format("Loading controls for %s", repo.Name)
-	list := make(ControlMap)
-	cf := repo.controlCacheFile()
+//TODO rewrite
+func (repo *Repo) loadLocal() {
+	readFunc := func(file string) {
+		tmpDir, _ := ioutil.TempDir(os.TempDir(), "repo")
+		defer os.RemoveAll(tmpDir)
+
+		pkg, err := spakg.FromFile(file, &tmpDir)
+		if err != nil {
+			log.Warn.Format("Error loading %v: %v", file, err.Error())
+			return
+		}
+		if file != repo.GetSpakgOutput(pkg.Pkginfo) {
+			log.Warn.Format("Error loading %v: %v", file, "Mismatched checksums: "+pkg.Pkginfo.String())
+			return
+		}
+
+		repo.addEntry(Entry{
+			Control:   pkg.Control,
+			Available: []pkginfo.PkgInfo{pkg.Pkginfo},
+		})
+	}
+
+	err := readAll(repo.spakgDir(), regexp.MustCompile(".*.spakg"), readFunc)
+	if err != nil {
+		log.Warn.Format("Unable to load repo %s's controls: %s", repo.Name, err)
+	}
+	return
+}
+
+func (repo *Repo) loadCache() {
+	log.Debug.Format("Loading cache for %s", repo.Name)
+	cf := repo.cacheFile()
 	if PathExists(cf) {
-		err := json.DecodeFile(cf, &list)
+		err := json.DecodeFile(cf, &repo.entries)
 		if err != nil {
-			log.Warn.Format("Could not load control cache for repo %s: %s", repo.Name, err)
+			log.Warn.Format("Could not load cache for repo %s: %s", repo.Name, err)
 		}
 	}
-	repo.controls = &list
-}
-
-func (repo *Repo) loadPkgInfoCache() {
-	log.Debug.Format("Loading pkginfos for %s", repo.Name)
-	list := make(PkgInfoMap)
-	pif := repo.pkgInfoCacheFile()
-	if PathExists(pif) {
-		err := json.DecodeFile(pif, &list)
-		if err != nil {
-			log.Warn.Format("Could not load pkginfo cache for repo %s: %s", repo.Name, err)
-		}
-	}
-	repo.fetchable = &list
-}
-
-func (repo *Repo) loadTemplateListCache() {
-	log.Debug.Format("Loading templates for %s", repo.Name)
-	list := make(TemplateFileMap)
-	tlf := repo.templateListCacheFile()
-	if PathExists(tlf) {
-		err := json.DecodeFile(tlf, &list)
-		if err != nil {
-			log.Warn.Format("Could not load template list cache for repo %s: %s", repo.Name, err)
-		}
-	}
-	repo.templateFiles = &list
 }
 
 func (repo *Repo) loadInstalledPackagesList() {

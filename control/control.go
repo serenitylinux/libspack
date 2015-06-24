@@ -68,6 +68,12 @@ func (c Control) Equals(other Control) bool {
 	//TODO better comparison?
 	return c.String() == other.String()
 }
+func (c Control) GreaterThan(other Control) bool {
+	if other.Version == c.Version {
+		return other.Iteration < c.Iteration
+	}
+	return spdl.NewVersion(spdl.GT, other.Version).Accepts(c.Version)
+}
 
 func FromTemplateFile(template string) (c Control, err error) {
 	commands := `

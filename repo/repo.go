@@ -6,14 +6,11 @@ import (
 	"github.com/serenitylinux/libspack/pkginfo"
 )
 
-//Sorted by pkgversion
-type ControlMap map[string][]control.Control
-
-// Map<name, map<version>>
-type TemplateFileMap map[string]map[string]string
-
-// Map<name-version, List<PkgInfo>>
-type PkgInfoMap map[string][]pkginfo.PkgInfo
+type Entry struct {
+	Control   control.Control
+	Template  string
+	Available []pkginfo.PkgInfo
+}
 
 // Map<name-version, Tuple<control,pkginfo,hashlist>>
 type PkgInstallSetMap map[string]PkgInstallSet
@@ -28,11 +25,8 @@ type Repo struct {
 	Version        string
 
 	//Private NOT SERIALIZED
-	controls      *ControlMap
-	templateFiles *TemplateFileMap
-	fetchable     *PkgInfoMap
-	local         *PkgInfoMap
-	installed     *PkgInstallSetMap
+	entries   map[string][]Entry
+	installed *PkgInstallSetMap
 }
 
 func Load(filename string) (*Repo, error) {

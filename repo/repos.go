@@ -3,7 +3,6 @@ package repo
 import (
 	"fmt"
 	"io/ioutil"
-	"strconv"
 
 	"github.com/cam72cam/go-lumberjack/color"
 	"github.com/cam72cam/go-lumberjack/log"
@@ -61,77 +60,73 @@ func GetAllRepos() RepoList {
 
 func GetRepoFor(pkgname string) (*Repo, error) {
 	for _, repo := range repos {
-		for _, name := range repo.GetAllNames() {
-			if name == pkgname {
-				return repo, nil
-			}
+		if _, ok := repo.entries[pkgname]; ok {
+			return repo, nil
 		}
 	}
 	return nil, fmt.Errorf("Unable to find repo for %v", pkgname)
 }
 
-func GetPackageAllVersions(pkgname string) ([]control.Control, *Repo) {
-	for _, repo := range repos {
-		cl, exists := repo.GetControls(pkgname)
-		if exists {
-			return cl, repo
+func GetPackageAllVersions(pkgname string) (res []control.Control, repo *Repo) {
+	for _, repo = range repos {
+		repo.MapByName(pkgname, func(e Entry) {
+			res = append(res, e.Control)
+		})
+		if len(res) != 0 {
+			return res, repo
 		}
 	}
 	return nil, nil
 }
 
-func GetPackageVersionIteration(pkgname, version, iteration string) (*control.Control, *Repo) {
-	pkgs, repo := GetPackageAllVersions(pkgname)
-	itri, e := strconv.Atoi(iteration)
-	if e != nil {
-		log.Warn.Println(e)
-		return nil, nil
-	}
-	var ctrl *control.Control
-	for _, ver := range pkgs {
-		if ver.Version == version {
-			if itri == ver.Iteration {
-				ctrl = &ver
-				break
+func GetPackageVersionIteration(pkgname, version string, iteration int) (c *control.Control, repo *Repo) {
+	for _, repo = range repos {
+		repo.MapByName(pkgname, func(e Entry) {
+			if e.Control.Version == version && e.Control.Iteration == iteration {
+				c = &e.Control
 			}
-		}
-	}
-	if ctrl == nil {
-		return nil, nil
-	} else {
-		return ctrl, repo
-	}
-}
-func GetPackageVersion(pkgname, version string) (*control.Control, *Repo) {
-	pkgs, repo := GetPackageAllVersions(pkgname)
-	var ctrl *control.Control
-	for _, ver := range pkgs {
-		if ver.Version == version {
-			if ctrl == nil || ctrl.Iteration < ver.Iteration {
-				ctrl = &ver
-			}
-		}
-	}
-	if ctrl == nil {
-		return nil, nil
-	} else {
-		return ctrl, repo
-	}
-}
-func GetPackageLatest(pkgname string) (*control.Control, *Repo) {
-	for _, repo := range repos {
-		c, exists := repo.GetLatestControl(pkgname)
-		if exists {
+		})
+		if c != nil {
 			return c, repo
 		}
 	}
 	return nil, nil
 }
-func GetPackageInstalledByName(pkgname string, destdir string) (*PkgInstallSet, *Repo) {
-	for _, repo := range repos {
-		c := repo.GetInstalledByName(pkgname, destdir)
+func GetPackageVersion(pkgname, version string) (c *control.Control, repo *Repo) {
+	for _, repo = range repos {
+		repo.MapByName(pkgname, func(e Entry) {
+			if e.Control.Version == version {
+				if c == nil || e.Control.GreaterThan(*c) {
+					c = &e.Control
+				}
+			}
+		})
 		if c != nil {
 			return c, repo
+		}
+	}
+	return nil, nil
+}
+func GetPackageLatest(pkgname string) (c *control.Control, repo *Repo) {
+	for _, repo = range repos {
+		repo.MapByName(pkgname, func(e Entry) {
+			if c == nil || e.Control.GreaterThan(*c) {
+				c = &e.Control
+			}
+		})
+		if c != nil {
+			return c, repo
+		}
+	}
+	return nil, nil
+}
+func GetPackageInstalledByName(pkgname string, destdir string) (p *PkgInstallSet, repo *Repo) {
+	for _, repo = range repos {
+		repo.MapInstalledByName(pkgname, destdir, func(installed PkgInstallSet) {
+			p = &installed
+		})
+		if p != nil {
+			return p, repo
 		}
 	}
 	return nil, nil

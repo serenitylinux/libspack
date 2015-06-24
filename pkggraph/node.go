@@ -88,9 +88,7 @@ func (n *Node) ApplyChanges() error {
 			}
 		}
 		//Check is latest
-		return newControl == nil ||
-			spdl.NewVersion(spdl.GT, newControl.Version).Accepts(c.Version) &&
-				((newControl.Version == c.Version && newControl.Iteration < c.Iteration) || newControl.Version != c.Version)
+		return newControl == nil || c.GreaterThan(*newControl)
 	}
 
 	switch n.Type {
