@@ -32,7 +32,7 @@ func (c Constraints) HasParent(parent string) bool {
 func (c *Constraints) RemoveParent(parent string) bool {
 	for i, val := range *c {
 		if val.parent != nil && *val.parent == parent {
-			log.Debug.Format("Removing parent constraintt %v: %v", parent, val.value.String())
+			log.Debug.Format(prefix+"Removing parent constraint %v: %v", parent, val.value.String())
 			(*c)[i], (*c)[len(*c)-1], *c = (*c)[len(*c)-1], Constraint{}, (*c)[:len(*c)-1]
 			return true
 		}
@@ -123,7 +123,7 @@ func (c Constraints) AnyEnabled(g *Graph) bool {
 	}
 	for _, val := range c {
 		if val.value.Condition == nil {
-			continue //OK
+			return true
 		}
 		var flags spdl.FlatFlagList //Will be empty if no parent
 		if val.parent != nil {
@@ -132,11 +132,10 @@ func (c Constraints) AnyEnabled(g *Graph) bool {
 			}
 		}
 		if val.value.Condition.Enabled(flags) {
-			continue //OK
+			return true
 		}
-		return false
 	}
-	return true
+	return false
 }
 
 //TODO Do we want a list of dep.Dep or will flags suffice?

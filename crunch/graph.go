@@ -41,7 +41,6 @@ func NewGraph(root string, repos repo.RepoList) (*Graph, error) {
 			node := NewNode(name, r, g)
 			g.ordered = append(g.ordered, node)
 			g.nodes[name] = node
-
 		})
 	}
 

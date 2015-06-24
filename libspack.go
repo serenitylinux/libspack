@@ -9,9 +9,9 @@ import (
 	"github.com/cam72cam/go-lumberjack/color"
 	"github.com/cam72cam/go-lumberjack/log"
 	"github.com/serenitylinux/libspack/control"
+	"github.com/serenitylinux/libspack/crunch"
 	"github.com/serenitylinux/libspack/forge"
 	"github.com/serenitylinux/libspack/misc"
-	"github.com/serenitylinux/libspack/crunch"
 	"github.com/serenitylinux/libspack/pkginfo"
 	"github.com/serenitylinux/libspack/repo"
 	"github.com/serenitylinux/libspack/spakg"
@@ -54,7 +54,7 @@ func buildGraphs(pkgs []spdl.Dep, isForge bool, root string, ignoreBDeps bool, r
 	toRemove := make([]string, 0)
 
 	addToForge = func(pkg spdl.Dep) (err error) {
-		log.Info.Format("Forge %v", pkg.String())
+		log.Debug.Format("Forge %v", pkg.String())
 		info := &forgeInfo{
 			Graph: graph.Clone(),
 		}
@@ -159,7 +159,7 @@ func buildGraphs(pkgs []spdl.Dep, isForge bool, root string, ignoreBDeps bool, r
 
 	addToWield = func(pkgs []spdl.Dep, g *crunch.Graph, itype crunch.InstallType) error {
 		for _, dep := range pkgs {
-			log.Info.Format("Wield %v", dep.String())
+			log.Debug.Format("Wield %v", dep.String())
 			err := g.EnablePackage(dep, itype)
 			if err != nil {
 				return err

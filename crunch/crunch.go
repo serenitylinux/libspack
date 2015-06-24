@@ -25,11 +25,15 @@ func (g *Graph) crunch(iters Iterations) error {
 	}
 	iters[hash] = g.Clone()
 
+	for _, node := range g.ordered {
+		node.lastHash = node.rdeps.Hash(g)
+	}
+
 	var indent int = 0
 	var handle func(node *Node) error
 	handle = func(node *Node) error {
 		indent++
-		defer func() { indent-- }()
+		defer func() { indent--; prefix = strings.Repeat("\t", indent) }()
 		prefix = strings.Repeat("\t", indent)
 		debug := func(s string) {
 			if node.pkginfo == nil {
@@ -85,11 +89,12 @@ func (g *Graph) crunch(iters Iterations) error {
 		}
 	}
 
+	prefix = "\t"
 	//prune changed nodes
 	log.Debug.Format("Pruning nodes")
 	for _, node := range g.ordered {
-		if node.hasNewConstraints {
-			log.Debug.Format("Pruning node %v", node.Name)
+		if node.hasNewConstraints && node.lastHash != node.rdeps.Hash(g) {
+			log.Debug.Format(prefix+"Pruning node %v", node.Name)
 			if err := node.ApplyChanges(); err != nil {
 				return err
 			}
@@ -107,7 +112,7 @@ func (g *Graph) crunch(iters Iterations) error {
 	//check done or iterate again
 	isDone := true
 	for _, node := range g.nodes {
-		if node.hasNewConstraints {
+		if node.lastHash != node.rdeps.Hash(g) {
 			isDone = false
 			break
 		}

@@ -26,6 +26,8 @@ type Node struct {
 	pkginfo     *pkginfo.PkgInfo
 	isInstalled bool
 	isBin       bool
+
+	lastHash string
 }
 
 func NewNode(name string, repo *repo.Repo, graph *Graph) *Node {
@@ -52,6 +54,8 @@ func (n Node) Clone(newgraph *Graph) *Node {
 		pkginfo:     n.pkginfo,
 		isInstalled: n.isInstalled,
 		isBin:       n.isBin,
+
+		lastHash: n.lastHash,
 	}
 }
 
