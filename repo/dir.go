@@ -160,7 +160,7 @@ func (repo *Repo) addEntry(e Entry) {
 		found.Available = append(found.Available, e.Available...)
 	}
 
-	repo.entries[key] = append(repo.entries[key], found)
+	repo.entries[key][foundIndex] = found
 }
 
 func (repo *Repo) updateControlsFromTemplates() {
