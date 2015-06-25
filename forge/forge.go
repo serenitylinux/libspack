@@ -25,6 +25,106 @@ import (
 import . "github.com/serenitylinux/libspack/misc"
 import . "github.com/serenitylinux/libspack/hash"
 
+const (
+	dest = "dest"
+	src  = "src"
+)
+
+type forgeInfo struct {
+	template string
+	outfile  string
+	root     string
+	workdir  string
+
+	control     control.Control
+	states      spdl.FlatFlagList
+	test        bool
+	interactive bool
+}
+
+func Forge(template, outfile, root string, states spdl.FlatFlagList, test bool, interactive bool) error {
+	c, err := control.FromTemplateFile(template)
+	if err != nil {
+		return err
+	}
+
+	info := forgeInfo{
+		template:    template,
+		outfile:     outfile,
+		root:        root,
+		workdir:     "/forge/",
+		control:     c,
+		states:      states,
+		test:        test,
+		interactive: interactive,
+	}
+
+	return forge(info)
+}
+func forge(info forgeInfo) error {
+	err := os.MkdirAll(info.root+info.workdir, 0755)
+	if err != nil {
+		return err
+	}
+	//defer os.RemoveAll(info.root + info.workdir)
+
+	def := filepath.Dir(info.template) + "/default"
+	if _, err := os.Stat(def); err == nil {
+		log.Info.Format("Including repo default: %v", def)
+		cmd := exec.Command("cp", def, info.root+info.workdir)
+		err = cmd.Run()
+		if err != nil {
+			return err
+		}
+	}
+
+	cmd := exec.Command("cp", info.template, info.root+info.workdir)
+	err = cmd.Run()
+	if err != nil {
+		return err
+	}
+
+	os.Mkdir(info.root+info.workdir+dest, 0755)
+	os.Mkdir(info.root+info.workdir+src, 0755)
+
+	OnError := func(err error) error {
+		if info.interactive {
+			log.Error.Println(err)
+			log.Info.Println("Dropping you to a shell")
+			InDir(info.root+info.workdir, func() {
+				cmd := exec.Command("bash")
+				cmd.Stdout = os.Stdout
+				cmd.Stderr = os.Stderr
+				cmd.Stdin = os.Stdin
+				cmd.Run()
+			})
+		}
+		return err
+	}
+
+	err = FetchPkgSrc(info)
+	if err != nil {
+		return OnError(err)
+	}
+
+	err = runParts(info)
+	if err != nil {
+		return OnError(err)
+	}
+
+	err = StripPackage(info)
+	if err != nil {
+		return OnError(err)
+	}
+
+	err = BuildPackage(info)
+	if err != nil {
+		return OnError(err)
+	}
+
+	return nil
+}
+
 func extractPkgSrc(srcPath string, outDir string) error {
 	tarRegex := regexp.MustCompile(".*\\.(tar|tgz).*")
 	zipRegex := regexp.MustCompile(".*\\.zip")
@@ -40,10 +140,10 @@ func extractPkgSrc(srcPath string, outDir string) error {
 	return RunCommand(cmd, log.Debug, os.Stderr)
 }
 
-func FetchPkgSrc(urls []string, basedir string, srcdir string) error {
+func FetchPkgSrc(info forgeInfo) error {
 	Header("Fetching Source")
 
-	for _, url := range urls {
+	for _, url := range info.control.Src {
 		if url == "" { //Hack while we are still using dumb bash str lists for urls
 			continue
 		}
@@ -51,12 +151,13 @@ func FetchPkgSrc(urls []string, basedir string, srcdir string) error {
 		httpRegex := regexp.MustCompile("(http|https)://.*")
 		ftpRegex := regexp.MustCompile("ftp://.*")
 
-		base := path.Base(url)
-		file := basedir + "/" + base
+		name := path.Base(url)
+		file := info.root + info.workdir + "/" + name
+		srcdir := info.root + info.workdir + src
 		switch {
 		case gitRegex.MatchString(url):
 			log.Debug.Format("Fetching '%s' with git", url)
-			dir := srcdir + base
+			dir := srcdir + name
 
 			dir = strings.Replace(dir, ".git", "", 1)
 			err := os.Mkdir(dir, 0755)
@@ -110,9 +211,17 @@ func envString(env map[string]string) string {
 	return strings.Join(parts, "\n")
 }
 
-func runPart(part, fileName, action, src_dir, root string, states spdl.FlatFlagList, env map[string]string) error {
+func runPart(part, action string, info forgeInfo, env map[string]string) error {
+	var flagstuff string
+	for _, fl := range info.states.Slice() {
+		flagstuff += fmt.Sprintf("flag_%s=%t \n", fl.Name, fl.Enabled)
+	}
+
+	template := info.workdir + path.Base(info.template)
+	defaults := info.workdir + "default"
+
 	forge_helper := `
-		%[7]s
+		` + envString(env) + `
 
 		if ! [ -d /dev/ ]; then
 			mkdir /dev;
@@ -126,54 +235,43 @@ func runPart(part, fileName, action, src_dir, root string, states spdl.FlatFlagL
 		}
 		
 		function default {
-			%[3]s
+			` + action + `
 		}
 		
-		%[6]s
+		` + flagstuff + `
 		
-		source %[2]s
+		source ` + template + `
 		
-		if [ -f %[4]s ]; then
-			source %[4]s
+		if [ -f ` + defaults + ` ]; then
+			source ` + defaults + `
 		fi
 
-		echo $PWD
-		
-		cd %[5]s/$srcdir
-
-		echo $PWD
+		cd ` + info.workdir + src + `/$srcdir
 		
 		set +e 
-		declare -f %[1]s > /dev/null
+		declare -f ` + part + ` > /dev/null
 		exists=$?
 		set -e
 		
 		if [ $exists -ne 0 ]; then
 			default
 		else
-			%[1]s
+			` + part + `
 		fi`
-
-	var flagstuff string
-	for _, fl := range states.Slice() {
-		flagstuff += fmt.Sprintf("flag_%s=%t \n", fl.Name, fl.Enabled)
-	}
-
-	forge_helper = fmt.Sprintf(forge_helper, part, fileName, action, filepath.Dir(fileName)+"/default", "/src", flagstuff, envString(env))
 
 	Header("Running " + part)
 
 	bash := exec.Command("bash", "-ce", forge_helper)
-	if filepath.Clean(root) != "/" {
+	if filepath.Clean(info.root) != "/" {
 		if _, err := exec.LookPath("chroot"); err == nil {
-			bash.Args = append([]string{root}, bash.Args...)
+			bash.Args = append([]string{info.root}, bash.Args...)
 			bash = exec.Command("chroot", bash.Args...)
 		} else if _, err := exec.LookPath("systemd-nspawn"); err == nil {
-			bash.Args = append([]string{"-D", root}, bash.Args...)
+			bash.Args = append([]string{"-D", info.root}, bash.Args...)
 			bash = exec.Command("systemd-nspawn", bash.Args...)
 		}
 	}
-	err := RunCommand(bash, log.Debug, os.Stderr)
+	err := RunCommand(bash, log.Info, os.Stderr)
 	if err != nil {
 		return err
 	}
@@ -183,7 +281,7 @@ func runPart(part, fileName, action, src_dir, root string, states spdl.FlatFlagL
 	return nil
 }
 
-func runParts(template, src_dir, dest_dir, root string, test bool, states spdl.FlatFlagList) error {
+func runParts(info forgeInfo) error {
 	type action struct {
 		part string
 		args string
@@ -193,19 +291,19 @@ func runParts(template, src_dir, dest_dir, root string, test bool, states spdl.F
 	parts := []action{
 		action{"configure", "./configure --prefix=/usr/", true},
 		action{"build", "make", true},
-		action{"test", "make test", test},
+		action{"test", "make test", info.test},
 		action{"installpkg", "make DESTDIR=${dest_dir} install", true},
 	}
 
 	env := map[string]string{
 		"MAKEFLAGS":              "-j6",
-		"dest_dir":               dest_dir,
+		"dest_dir":               info.workdir + dest,
 		"FORCE_UNSAFE_CONFIGURE": "1", //TODO probably shouldn't do this
 	}
 
 	for _, part := range parts {
 		if part.do {
-			err := runPart(part.part, template, part.args, src_dir, root, states, env)
+			err := runPart(part.part, part.args, info, env)
 			if err != nil {
 				return err
 			}
@@ -215,7 +313,7 @@ func runParts(template, src_dir, dest_dir, root string, test bool, states spdl.F
 	return nil
 }
 
-func StripPackage(destdir string) error {
+func StripPackage(info forgeInfo) error {
 	Header("Strip package")
 
 	Clean := func(filter, strip string) error {
@@ -224,7 +322,7 @@ func StripPackage(destdir string) error {
 			if ! [ -z "$files" ]; then
 				strip %s $files
 			fi
-			`, destdir, filter, strip)
+			`, info.root+info.workdir, filter, strip)
 
 		return RunCommand(exec.Command("bash", "-c", cmd), log.Debug, os.Stderr)
 	}
@@ -269,13 +367,13 @@ exit 0
 	return buf.String(), err
 }
 
-func addFsToSpakg(basedir, destdir, outfile string, archive spakg.Spakg) error {
+func addFsToSpakg(dir, outfile string, archive spakg.Spakg) error {
 	fsTarName := spakg.FsName
-	fsTar := basedir + "/" + fsTarName
+	fsTar := dir + "/" + fsTarName
 	log.Debug.Println("Creating fs.tar: " + fsTar)
 
 	var err error
-	InDir(destdir, func() {
+	InDir(dir+dest, func() {
 		err = RunCommand(exec.Command("tar", "-cvf", fsTar, "."), log.Debug, os.Stderr)
 	})
 	if err != nil {
@@ -307,22 +405,22 @@ func addFsToSpakg(basedir, destdir, outfile string, archive spakg.Spakg) error {
 	return nil
 }
 
-func BuildPackage(template string, c *control.Control, destdir, basedir, outfile string, states spdl.FlatFlagList) error {
+func BuildPackage(info forgeInfo) error {
 	Header("Building package")
 
 	//Md5Sums
-	hl, err := createSums(destdir)
+	hl, err := createSums(info.root + info.workdir + dest)
 	if err != nil {
 		return errors.New(fmt.Sprintf("Unable to generate md5sums: %s", err))
 	}
 
-	pi := pkginfo.FromControl(c)
+	pi := pkginfo.FromControl(&info.control)
 	pi.BuildDate = time.Now()
-	pi.SetFlagStates(states)
+	pi.SetFlagStates(info.states)
 
 	//Template
 	var templateStr string
-	err = WithFileReader(template, func(reader io.Reader) {
+	err = WithFileReader(info.template, func(reader io.Reader) {
 		templateStr = ReaderToString(reader)
 	})
 	if err != nil {
@@ -330,80 +428,20 @@ func BuildPackage(template string, c *control.Control, destdir, basedir, outfile
 	}
 
 	//PkgInstall
-	pkginstall, err := createPkgInstall(template)
+	pkginstall, err := createPkgInstall(info.template)
 	if err != nil {
 		return errors.New(fmt.Sprintf("Unable to create pkginstall: %s", err))
 	}
 
 	//Create Spakg
-	archive := spakg.Spakg{Md5sums: hl, Control: *c, Template: templateStr, Pkginfo: *pi, Pkginstall: pkginstall}
+	archive := spakg.Spakg{Md5sums: hl, Control: info.control, Template: templateStr, Pkginfo: *pi, Pkginstall: pkginstall}
 	//FS
-	err = addFsToSpakg(basedir, destdir, outfile, archive)
+	err = addFsToSpakg(info.root+info.workdir, info.outfile, archive)
 	if err != nil {
 		return err
 	}
 
 	PrintSuccess()
-
-	return nil
-}
-
-func Forge(template, outfile, root string, states spdl.FlatFlagList, test bool, interactive bool) error {
-	c, err := control.FromTemplateFile(template)
-	if err != nil {
-		return err
-	}
-
-	//basedir, _ := ioutil.TempDir(root, "forge")
-	//defer os.RemoveAll(basedir)
-	basedir := ""
-
-	cmd := exec.Command("cp", template, root)
-	err = cmd.Run()
-	if err != nil {
-		return err
-	}
-	template = "/" + filepath.Base(template)
-
-	dest_dir := root + basedir + "dest"
-	src_dir := root + basedir + "src"
-	os.Mkdir(dest_dir, 0755)
-	os.Mkdir(src_dir, 0755)
-
-	OnError := func(err error) error {
-		if interactive {
-			log.Error.Println(err)
-			log.Info.Println("Dropping you to a shell")
-			InDir(basedir, func() {
-				cmd := exec.Command("bash")
-				cmd.Stdout = os.Stdout
-				cmd.Stderr = os.Stderr
-				cmd.Stdin = os.Stdin
-				cmd.Run()
-			})
-		}
-		return err
-	}
-
-	err = FetchPkgSrc(c.Src, basedir, src_dir)
-	if err != nil {
-		return OnError(err)
-	}
-
-	err = runParts(template, src_dir, dest_dir, root, test, states)
-	if err != nil {
-		return OnError(err)
-	}
-
-	err = StripPackage(dest_dir)
-	if err != nil {
-		return OnError(err)
-	}
-
-	err = BuildPackage(template, &c, dest_dir, basedir, outfile, states)
-	if err != nil {
-		return OnError(err)
-	}
 
 	return nil
 }
