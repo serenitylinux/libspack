@@ -22,14 +22,14 @@ import (
 //TODO: reinstall
 
 func Forge(pkgs []spdl.Dep, root string, ignoreBDeps bool) error {
-	return buildGraphs(pkgs, true, root, ignoreBDeps, false, crunch.InstallConvenient)
+	return buildGraphs(pkgs, true, root, ignoreBDeps, false, false, crunch.InstallConvenient)
 }
 
-func Wield(pkgs []spdl.Dep, root string, reinstall bool, itype crunch.InstallType) error {
-	return buildGraphs(pkgs, false, root, false, reinstall, itype)
+func Wield(pkgs []spdl.Dep, root string, reinstall, ignoreDeps bool, itype crunch.InstallType) error {
+	return buildGraphs(pkgs, false, root, false, ignoreDeps, reinstall, itype)
 }
 
-func buildGraphs(pkgs []spdl.Dep, isForge bool, root string, ignoreBDeps bool, reinstall bool, itype crunch.InstallType) error {
+func buildGraphs(pkgs []spdl.Dep, isForge bool, root string, ignoreBDeps bool, ignoreDeps bool, reinstall bool, itype crunch.InstallType) error {
 	type forgeInfo struct {
 		Graph *crunch.Graph
 		Root  string
@@ -107,11 +107,6 @@ func buildGraphs(pkgs []spdl.Dep, isForge bool, root string, ignoreBDeps bool, r
 
 		added[key] = false
 
-		libc, _ := spdl.ParseDep("libc(+dev)")
-		if err := addToWield([]spdl.Dep{{Name: "base"}, libc}, info.Graph, crunch.InstallLatestBin); err != nil {
-			return err
-		}
-
 		if !ignoreBDeps {
 			bdeps := make([]spdl.Dep, 0)
 			for _, bdep := range info.Control.Bdeps {
@@ -134,7 +129,7 @@ func buildGraphs(pkgs []spdl.Dep, isForge bool, root string, ignoreBDeps bool, r
 					Flags:    &flags,
 				})
 			}
-
+			bdeps = append(bdeps, spdl.Dep{Name: "base-files"})
 			if err := addToWield(bdeps, info.Graph, crunch.InstallLatestBin); err != nil {
 				return err
 			}
@@ -164,6 +159,10 @@ func buildGraphs(pkgs []spdl.Dep, isForge bool, root string, ignoreBDeps bool, r
 			if err != nil {
 				return err
 			}
+		}
+
+		if ignoreDeps {
+			return nil
 		}
 
 		if err := g.Crunch(); err != nil {
@@ -237,8 +236,11 @@ func buildGraphs(pkgs []spdl.Dep, isForge bool, root string, ignoreBDeps bool, r
 				}
 			}
 
-			log.Info.Format("Forging %s", info.Pkginfo.PrettyString())
+			log.Info.Format("Forging %s in %v", info.Pkginfo.PrettyString(), info.Root)
 			spakgFile := info.Repo.GetSpakgOutput(*info.Pkginfo)
+			if ignoreBDeps {
+				info.Root = "/"
+			}
 			err = forge.Forge(info.Template, spakgFile, info.Root, info.Pkginfo.FlagStates, false, isInteractive)
 			if err != nil {
 				return err
@@ -284,12 +286,6 @@ func wieldGraph(nodes []*crunch.Node, root string) error {
 	}
 	log.Info.Println()
 
-	//Preinstall
-	for _, pkg := range spkgs {
-		wield.PreInstall(pkg.spkg, root)
-	}
-	log.Debug.Println()
-
 	//Install
 	for _, pkg := range spkgs {
 		err := wield.ExtractCheckCopy(pkg.file, root)
@@ -304,6 +300,12 @@ func wieldGraph(nodes []*crunch.Node, root string) error {
 	if len(spkgs) != 0 {
 		wield.Ldconfig(root)
 	}
+
+	//Preinstall
+	for _, pkg := range spkgs {
+		wield.PreInstall(pkg.spkg, root)
+	}
+	log.Debug.Println()
 
 	//PostInstall
 	for _, pkg := range spkgs {
