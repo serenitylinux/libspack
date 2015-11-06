@@ -92,7 +92,7 @@ func (c Constraints) Flags(g *Graph) (total spdl.FlatFlagList, err error) {
 				for _, c := range c {
 					var parent string
 					if c.parent != nil {
-						parent = g.nodes[*c.parent].Hash()
+						parent = g.nodes[*c.parent].Pkginfo().PrettyString()
 					}
 					fmt.Printf("DEP: %s %s\n", parent, c.value.String())
 				}
