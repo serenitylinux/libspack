@@ -29,7 +29,7 @@ type Control struct {
 //Hack for older controls for now
 func (c *Control) FlagsCrunch() {
 	//changed := false
-	crunch := func(oldl spdl.DepList) (newl spdl.DepList) {
+	/*crunch := func(oldl spdl.DepList) (newl spdl.DepList) {
 		for _, o := range oldl {
 			dupeIndex := -1
 			for i, n := range newl {
@@ -53,7 +53,7 @@ func (c *Control) FlagsCrunch() {
 		return newl
 	}
 	c.Bdeps = crunch(c.Bdeps)
-	c.Deps = crunch(c.Deps)
+	c.Deps = crunch(c.Deps)*/
 	/*
 		if changed {
 			s, _ := json.MarshalIndent(c, "", "\t")
@@ -88,17 +88,26 @@ fi
 function lister() {
 	local set i
 	set=""
-	for i in "$@"; do
-		echo -en "$set\"$i\""
+	for i in ${!curr[*]}; do
+		echo -en "$set\"${curr[$i]}\""
 		set=", "
 	done
 }
 
-srcval="$(lister ${src[@]})"
-bdepsval="$(lister ${bdeps[@]})"
-depsval="$(lister ${deps[@]})"
-archval="$(lister ${arch[@]})"
-flagsval="$(lister ${flags[@]})"
+curr=("${src[@]}")
+srcval="$(lister)"
+
+curr=("${bdeps[@]}")
+bdepsval="$(lister)"
+
+curr=("${deps[@]}")
+depsval="$(lister)"
+
+curr=("${arch[@]}")
+archval="$(lister)"
+
+curr=("${flags[@]}")
+flagsval="$(lister)"
 
 cat << EOT
 {
