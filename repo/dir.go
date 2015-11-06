@@ -173,7 +173,7 @@ func (repo *Repo) updateControlsFromTemplates() {
 		repo.addEntry(Entry{Control: c, Template: file})
 	}
 
-	err := readAll(repo.templatesDir(), regexp.MustCompile(".*\\.pie"), readFunc)
+	err := readAll(repo.templatesDir(), regexp.MustCompile(".*\\.pie$"), readFunc)
 	if err != nil {
 		log.Warn.Format("Unable to load repo %s's templates: %s", repo.Name, err)
 	}
