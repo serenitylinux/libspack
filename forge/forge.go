@@ -112,10 +112,10 @@ func forge(info forgeInfo) error {
 		return OnError(err)
 	}
 
-	err = StripPackage(info)
+	/*err = StripPackage(info)
 	if err != nil {
 		return OnError(err)
-	}
+	}*/
 
 	err = BuildPackage(info)
 	if err != nil {
@@ -157,7 +157,7 @@ func FetchPkgSrc(info forgeInfo) error {
 		switch {
 		case gitRegex.MatchString(url):
 			log.Debug.Format("Fetching '%s' with git", url)
-			dir := srcdir + name
+			dir := srcdir + "/" + name
 
 			dir = strings.Replace(dir, ".git", "", 1)
 			err := os.Mkdir(dir, 0755)
@@ -263,6 +263,28 @@ func runPart(part, action string, info forgeInfo, env map[string]string) error {
 
 	bash := exec.Command("bash", "-ce", forge_helper)
 	if filepath.Clean(info.root) != "/" {
+		//TODO put in base HACK
+		os.Mkdir(info.root+"/dev", 0755)
+		os.Mkdir(info.root+"/proc", 0755)
+
+		if err := RunCommandToStdOutErr(exec.Command("mount", "-v", "--bind", "/dev", info.root+"/dev")); err != nil {
+			return err
+		}
+		defer func() {
+			if err := RunCommandToStdOutErr(exec.Command("umount", "-l", info.root+"/dev")); err != nil {
+				log.Error.Println(err.Error())
+			}
+		}()
+
+		if err := RunCommandToStdOutErr(exec.Command("mount", "-vt", "proc", "proc", info.root+"/proc")); err != nil {
+			return err
+		}
+		defer func() {
+			if err := RunCommandToStdOutErr(exec.Command("umount", "-l", info.root+"/proc")); err != nil {
+				log.Error.Println(err.Error())
+			}
+		}()
+
 		if _, err := exec.LookPath("chroot"); err == nil {
 			bash.Args = append([]string{info.root}, bash.Args...)
 			bash = exec.Command("chroot", bash.Args...)
@@ -296,7 +318,7 @@ func runParts(info forgeInfo) error {
 	}
 
 	env := map[string]string{
-		"MAKEFLAGS":              "-j6",
+		"MAKEFLAGS":              "-j4",
 		"dest_dir":               info.workdir + dest,
 		"FORCE_UNSAFE_CONFIGURE": "1", //TODO probably shouldn't do this
 	}
