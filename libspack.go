@@ -21,15 +21,15 @@ import (
 
 //TODO: reinstall
 
-func Forge(pkgs []spdl.Dep, root string, ignoreBDeps bool) error {
-	return buildGraphs(pkgs, true, root, ignoreBDeps, false, false, crunch.InstallConvenient)
+func Forge(pkgs []spdl.Dep, root string, ignoreBDeps, buildLocal bool) error {
+	return buildGraphs(pkgs, true, root, ignoreBDeps, buildLocal, false, false, crunch.InstallConvenient)
 }
 
 func Wield(pkgs []spdl.Dep, root string, reinstall, ignoreDeps bool, itype crunch.InstallType) error {
-	return buildGraphs(pkgs, false, root, false, ignoreDeps, reinstall, itype)
+	return buildGraphs(pkgs, false, root, false, false, ignoreDeps, reinstall, itype)
 }
 
-func buildGraphs(pkgs []spdl.Dep, isForge bool, root string, ignoreBDeps bool, ignoreDeps bool, reinstall bool, itype crunch.InstallType) error {
+func buildGraphs(pkgs []spdl.Dep, isForge bool, root string, ignoreBDeps bool, buildLocal bool, ignoreDeps bool, reinstall bool, itype crunch.InstallType) error {
 	type forgeInfo struct {
 		Graph *crunch.Graph
 		Root  string
@@ -65,7 +65,10 @@ func buildGraphs(pkgs []spdl.Dep, isForge bool, root string, ignoreBDeps bool, i
 		info.Root += "/"
 		toRemove = append(toRemove, info.Root)
 		log.Debug.Format("Root: %v", info.Root)
-		info.Graph.ChangeRoot(info.Root)
+
+		if !buildLocal {
+			info.Graph.ChangeRoot(info.Root)
+		}
 
 		info.Repo, err = repo.GetRepoFor(pkg.Name)
 		if err != nil {
@@ -129,7 +132,9 @@ func buildGraphs(pkgs []spdl.Dep, isForge bool, root string, ignoreBDeps bool, i
 					Flags:    &flags,
 				})
 			}
-			bdeps = append(bdeps, spdl.Dep{Name: "base-files"})
+			if !buildLocal {
+				bdeps = append(bdeps, spdl.Dep{Name: "base-files"})
+			}
 			if err := addToWield(bdeps, info.Graph, crunch.InstallLatestBin); err != nil {
 				return err
 			}
@@ -230,6 +235,11 @@ func buildGraphs(pkgs []spdl.Dep, isForge bool, root string, ignoreBDeps bool, i
 		for _, info := range toForge {
 			log.Info.Format("Installing bdeps for %s", info.Pkginfo.PrettyString())
 
+			if ignoreBDeps || buildLocal {
+				info.Root = "/"
+
+			}
+
 			if len(info.Graph.ToWield()) != 0 {
 				if err := wieldGraph(info.Graph.ToWield(), info.Root); err != nil {
 					return err
@@ -238,9 +248,6 @@ func buildGraphs(pkgs []spdl.Dep, isForge bool, root string, ignoreBDeps bool, i
 
 			log.Info.Format("Forging %s in %v", info.Pkginfo.PrettyString(), info.Root)
 			spakgFile := info.Repo.GetSpakgOutput(*info.Pkginfo)
-			if ignoreBDeps {
-				info.Root = "/"
-			}
 			err = forge.Forge(info.Template, spakgFile, info.Root, info.Pkginfo.FlagStates, false, isInteractive)
 			if err != nil {
 				return err
