@@ -56,10 +56,13 @@ func (g *Graph) EnablePackage(dep spdl.Dep, typ InstallType) error {
 		if err := curr.SetInstallType(typ); err != nil {
 			return err
 		}
+		if err := curr.AddConstraint(dep); err != nil {
+			return err
+		}
 		if err := curr.ApplyChanges(); err != nil {
 			return err
 		}
-		return curr.AddConstraint(dep)
+		return nil
 	}
 	return fmt.Errorf("Unable to find package %v", dep.Name)
 }
