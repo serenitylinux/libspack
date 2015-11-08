@@ -205,11 +205,13 @@ func ExtractCheckCopy(pkgfile string, destdir string) error {
 			}
 			if currhash != pkg.Md5sums[path] {
 				if PathExists(destPath) {
+					log.Debug.Format("Removing current %v", destPath)
 					e = os.Remove(destPath)
 					if e != nil {
 						return e
 					}
 				}
+				log.Debug.Format("Creating %v", destPath)
 				e = CopyFile(fsPath, destPath)
 				if e != nil {
 					return e
