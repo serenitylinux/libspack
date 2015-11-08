@@ -320,7 +320,7 @@ func runParts(info forgeInfo) error {
 	}
 
 	parts := []action{
-		action{"configure", "./configure --prefix=/usr/", true},
+		action{"configure", "./configure --prefix=$PREFIX", true},
 		action{"build", "make", true},
 		action{"test", "make test", info.test},
 		action{"installpkg", "make DESTDIR=${dest_dir} install", true},
