@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
@@ -220,8 +221,16 @@ func runPart(part, action string, info forgeInfo, env map[string]string) error {
 	template := info.workdir + path.Base(info.template)
 	defaults := info.workdir + "default"
 
+	globalvars, err := ioutil.ReadFile("/etc/spack/settings.sh")
+	if err != nil {
+		log.Warn.Format("Could not load config file /etc/spack/settings.sh, %v", err.Error())
+		err = nil
+	}
+
 	forge_helper := `
 		` + envString(env) + `
+
+		` + string(globalvars) + `
 
 		if ! [ -d /dev/ ]; then
 			mkdir /dev;
@@ -293,7 +302,7 @@ func runPart(part, action string, info forgeInfo, env map[string]string) error {
 			bash = exec.Command("systemd-nspawn", bash.Args...)
 		}
 	}
-	err := RunCommand(bash, log.Info, os.Stderr)
+	err = RunCommand(bash, log.Info, os.Stderr)
 	if err != nil {
 		return err
 	}
